@@ -23,7 +23,7 @@ void FakeTelemetrySource::tick()
 {
     const qint64 now = QDateTime::currentMSecsSinceEpoch();
 
-    for (int id = 1; id < kMotorCount; id++) {
+    for (int id = 1; id <= kMotorCount; id++) {
         MotorTelemetry sample;
         sample.motorId = id;
         sample.rpm = 2000.0 + QRandomGenerator::global()->bounded(4000);

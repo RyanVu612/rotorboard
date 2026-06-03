@@ -13,6 +13,7 @@ qt_add_executable(rotorboard_app
     src/model/MotorTelemetry.cpp
     src/telemetry/TelemetrySource.cpp
     src/telemetry/FakeTelemetrySource.cpp
+    src/warnings/MotorWarningEvaluator.cpp
 )
 
 target_include_directories(rotorboard_app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
