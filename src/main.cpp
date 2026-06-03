@@ -1,25 +1,24 @@
-#include "model/MotorTelemetry.h"
-#include "telemetry/FakeTelemetrySource.h"
+#include "app/AppController.h"
 
-#include <QCoreApplication>
-#include <QDebug>
+#include "model/MotorTelemetry.h"
+
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
+#include <QQmlContext>
 
 int main (int argc, char *argv[])
 {
-    QCoreApplication app(argc, argv);
+    QGuiApplication app(argc, argv);
     qRegisterMetaType<MotorTelemetry>();
 
-    FakeTelemetrySource source;
-    QObject::connect(&source, &TelemetrySource::telemetryReceived, 
-                    &app, [](const MotorTelemetry &t) {
-                        qInfo().nospace()
-                            << "M" << t.motorId
-                            << " rpm=" << t.rpm
-                            << " V=" << t.voltage
-                            << " A=" << t.current
-                            << " T=" << t.temperatureCelsius;
-                    });
+    AppController controller;
+    QQmlApplicationEngine engine;
+    engine.rootContext()->setContextProperty(QStringLiteral("appController"), &controller);
+    engine.loadFromModule("Rotorboard", "Main");
 
-    source.start();
+    if (engine.rootObjects().isEmpty()) {
+        return -1;
+    }
+
     return app.exec();
 }
