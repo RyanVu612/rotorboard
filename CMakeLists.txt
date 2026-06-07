@@ -17,6 +17,8 @@ qt_add_executable(rotorboard_app
     src/model/WarningLevel.h
     src/telemetry/TelemetrySource.h
     src/telemetry/TelemetrySource.cpp
+    src/telemetry/CsvPlaybackSource.cpp
+    src/telemetry/CsvPlaybackSource.h
     src/telemetry/FakeTelemetrySource.h
     src/telemetry/FakeTelemetrySource.cpp
     src/telemetry/TelemetryManager.h
