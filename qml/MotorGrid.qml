@@ -11,6 +11,8 @@ GridView {
     boundsBehavior: Flickable.StopAtBounds
 
     delegate: MotorCard {
+        required property var model
+
         width: root.cellWidth - 12
         height: root.cellHeight - 12
         motorId: model.motorId
