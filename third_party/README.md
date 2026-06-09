@@ -14,15 +14,15 @@ CMake expects headers at `third_party/mavlink_c/common/mavlink.h`.
 
 ## DroneCAN / HOBBYWING (`libcanard/`)
 
-Rotorboard decodes HOBBYWING ESC telemetry over DroneCAN using [libcanard](https://github.com/UAVCAN/libcanard). Message IDs and field layouts are vendored under `third_party/hobbywing_dsdl/` and decoded in `src/telemetry/dronecan/HobbywingMessages.cpp`.
+Rotorboard decodes HOBBYWING ESC telemetry over DroneCAN using the [DroneCAN libcanard](https://github.com/dronecan/libcanard) fork (UAVCAN v0 / DroneCAN API). Do not use [OpenCyphal/libcanard](https://github.com/OpenCyphal/libcanard) — it is a different library with a different layout and API. Message IDs and field layouts are vendored under `third_party/hobbywing_dsdl/` and decoded in `src/telemetry/dronecan/HobbywingMessages.cpp`.
 
 Clone libcanard before building:
 
 ```bash
-git clone --depth 1 https://github.com/UAVCAN/libcanard.git third_party/libcanard
+git clone --depth 1 https://github.com/dronecan/libcanard.git third_party/libcanard
 ```
 
-CMake compiles `third_party/libcanard/canard.c` and includes `third_party/libcanard/canard.h`.
+CMake compiles `third_party/libcanard/canard.c` and includes `third_party/libcanard/canard.h`. On 64-bit desktop builds (macOS, Linux, Windows), CMake defines `CANARD_64_BIT=1` automatically.
 
 ### HOBBYWING messages (v1)
 

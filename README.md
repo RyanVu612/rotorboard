@@ -16,7 +16,7 @@ Initialize third-party headers first (see [third_party/README.md](third_party/RE
 
 ```powershell
 git clone --depth 1 https://github.com/mavlink/c_library_v2.git third_party/mavlink_c
-git clone --depth 1 https://github.com/UAVCAN/libcanard.git third_party/libcanard
+git clone --depth 1 https://github.com/dronecan/libcanard.git third_party/libcanard
 ```
 
 ## Run
