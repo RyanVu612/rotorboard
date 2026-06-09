@@ -201,13 +201,13 @@ History buffers are updated in the store layer on each `updateTelemetry()` call�
 | File | Role |
 |------|------|
 | `Main.qml` | Window root, loads engine, hosts dashboard |
-| `DashboardPage.qml` | Page chrome, title, layout container |
-| `MotorGrid.qml` | Grid of motor cards bound to the list model |
+| `DashboardPage.qml` | Page chrome, title, layout mode toggle, layout container |
+| `MotorGrid.qml` | Responsive grid of motor cards bound to the list model |
 | `MotorCard.qml` | Per-motor RPM, voltage, current, temperature, status, sparklines |
 | `StatusBadge.qml` | Warning/stale visual (color, label) |
 | `Sparkline.qml` | Canvas-based mini time-series chart (normalized polyline) |
 
-**Implemented:** Cards react to `warningLevel` and `isStale` (border/background). Inline sparklines for RPM, current, and temperature (milestone 9).
+**Implemented:** Cards react to `warningLevel` and `isStale` (border/background). Inline sparklines for RPM, current, and temperature (milestone 9). **Layout modes:** compact (values only, ~220 px cards) vs detailed (full sparklines, ~310 px cards), toggled in the dashboard header and persisted via QML `Settings`. `MotorGrid` column count and cell size respond to window width and selected mode.
 
 ---
 
@@ -294,7 +294,7 @@ Build order keeps protocol complexity out of the UI until the pipeline is solid:
 6. **CSV playback** — done (`CsvPlaybackSource`, `--playback`, `samples/session.csv`)
 7. **MAVLink input** — done (`MavlinkTelemetrySource`, UDP + `ESC_STATUS`, `--mavlink`)
 8. **DroneCAN / HOBBYWING input** — done (`DroneCanTelemetrySource`, `SlcanTransport`, HOBBYWING StatusMsg1/2/3 merge cache, `--dronecan`)
-9. **Advanced widgets** (charts, layouts) — sparklines done; full-page charts / layout modes remain
+9. **Advanced widgets** (charts, layouts) — sparklines and compact/detailed layout modes done; full-page charts remain
 
 ---
 

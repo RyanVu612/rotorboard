@@ -15,6 +15,9 @@ Rectangle {
     required property var rpmHistory
     required property var currentHistory
     required property var temperatureHistory
+    required property int layoutMode
+
+    readonly property bool compact: layoutMode === 0
 
     radius: 8
     color: warningLevel === 3 ? "#191d21" : "#161c22"
@@ -29,7 +32,7 @@ Rectangle {
     Column {
         anchors.fill: parent
         anchors.margins: 16
-        spacing: 13
+        spacing: root.compact ? 8 : 13
 
         Row {
             width: parent.width
@@ -55,13 +58,14 @@ Rectangle {
             width: parent.width
             text: Math.round(root.rpm).toLocaleString(Qt.locale()) + " rpm"
             color: root.isStale ? "#879199" : "#f4f7f8"
-            font.pixelSize: 32
+            font.pixelSize: root.compact ? 26 : 32
             font.weight: Font.DemiBold
             elide: Text.ElideRight
         }
 
         Sparkline {
             width: parent.width
+            visible: !root.compact
             values: root.rpmHistory
             strokeColor: "#6eb5d8"
             dimmed: root.isStale
@@ -76,7 +80,7 @@ Rectangle {
         Grid {
             width: parent.width
             columns: 2
-            rowSpacing: 12
+            rowSpacing: root.compact ? 8 : 12
             columnSpacing: 12
 
             Repeater {
@@ -104,7 +108,7 @@ Rectangle {
                         width: parent.width
                         text: modelData.value
                         color: "#d6dde1"
-                        font.pixelSize: 18
+                        font.pixelSize: root.compact ? 16 : 18
                         font.weight: Font.Medium
                         elide: Text.ElideRight
                     }
@@ -112,7 +116,7 @@ Rectangle {
                     Sparkline {
                         width: parent.width
                         height: 24
-                        visible: modelData.history !== null
+                        visible: !root.compact && modelData.history !== null
                         values: modelData.history || []
                         strokeColor: modelData.color
                         dimmed: root.isStale
@@ -125,7 +129,7 @@ Rectangle {
             width: parent.width
             text: root.isStale ? "No recent data" : root.status
             color: root.isStale ? "#a9b2b8" : "#7ed39a"
-            font.pixelSize: 13
+            font.pixelSize: 12
             elide: Text.ElideRight
         }
     }

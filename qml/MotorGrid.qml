@@ -3,11 +3,15 @@ import QtQuick
 GridView {
     id: root
 
-    property int minimumCardWidth: 250
+    property int layoutMode: 1
+
+    readonly property int effectiveMinCardWidth: layoutMode === 0 ? 200 : 250
+    readonly property int effectiveCellHeight: layoutMode === 0 ? 220 : 310
+    readonly property int columns: Math.max(1, Math.floor(width / effectiveMinCardWidth))
 
     clip: true
-    cellWidth: Math.max(minimumCardWidth, Math.floor(width / Math.max(1, Math.floor(width / minimumCardWidth))))
-    cellHeight: 310
+    cellWidth: Math.floor(width / columns)
+    cellHeight: effectiveCellHeight
     boundsBehavior: Flickable.StopAtBounds
 
     delegate: MotorCard {
@@ -15,6 +19,7 @@ GridView {
 
         width: root.cellWidth - 12
         height: root.cellHeight - 12
+        layoutMode: root.layoutMode
         motorId: model.motorId
         rpm: model.rpm
         voltage: model.voltage
