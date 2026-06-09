@@ -1,20 +1,14 @@
 #include "AppController.h"
 
-#include "telemetry/CsvPlaybackSource.h"
-#include "telemetry/FakeTelemetrySource.h"
+#include "telemetry/TelemetrySourceFactory.h"
 
-#include <memory>
-
-AppController::AppController(const QString &playbackPath, QObject *parent)
+AppController::AppController(const SourceConfig &config, QObject *parent)
     : QObject(parent)
+    , m_sourceLabel(sourceLabelFor(config))
     , m_telemetryModel(this)
     , m_telemetryManager(&m_telemetryModel, this)
 {
-    if (playbackPath.isEmpty()) {
-        m_telemetryManager.setSource(std::make_unique<FakeTelemetrySource>());
-    } else {
-        m_telemetryManager.setSource(std::make_unique<CsvPlaybackSource>(playbackPath));
-    }
+    m_telemetryManager.setSource(makeTelemetrySource(config));
 }
 
 AppController::~AppController()
@@ -25,6 +19,11 @@ AppController::~AppController()
 QObject *AppController::telemetryModel()
 {
     return &m_telemetryModel;
+}
+
+QString AppController::sourceLabel() const
+{
+    return m_sourceLabel;
 }
 
 void AppController::start()

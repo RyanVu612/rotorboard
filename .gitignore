@@ -5,6 +5,9 @@ build2/
 # Session CSV logs (keep logs/ directory via .gitkeep)
 logs/*.csv
 
+# MAVLink C headers (clone per third_party/README.md)
+third_party/mavlink_c/
+
 # Qt Creator local IDE settings
 CMakeLists.txt.user*
 *.user

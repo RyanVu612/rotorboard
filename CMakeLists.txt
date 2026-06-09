@@ -4,9 +4,21 @@ project(rotorboard VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Test)
+set(MAVLINK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mavlink_c/common)
+
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Network Test)
 
 qt_standard_project_setup(REQUIRES 6.5)
+
+set(ROTORBOARD_MAVLINK_SOURCES
+    src/telemetry/MavlinkParser.h
+    src/telemetry/MavlinkParser.cpp
+    src/telemetry/MavlinkTelemetrySource.h
+    src/telemetry/MavlinkTelemetrySource.cpp
+    src/telemetry/TelemetrySourceConfig.h
+    src/telemetry/TelemetrySourceFactory.h
+    src/telemetry/TelemetrySourceFactory.cpp
+)
 
 qt_add_executable(rotorboard_app
     src/main.cpp
@@ -29,6 +41,7 @@ qt_add_executable(rotorboard_app
     src/store/MotorTelemetryModel.cpp
     src/warnings/MotorWarningEvaluator.h
     src/warnings/MotorWarningEvaluator.cpp
+    ${ROTORBOARD_MAVLINK_SOURCES}
 )
 
 set_source_files_properties(qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
@@ -48,13 +61,17 @@ qt_add_qml_module(rotorboard_app
         qml/StatusBadge.qml
 )
 
-target_include_directories(rotorboard_app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(rotorboard_app PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${MAVLINK_INCLUDE_DIR}
+)
 
 target_link_libraries(rotorboard_app PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
     Qt6::Quick
+    Qt6::Network
 )
 
 enable_testing()
@@ -99,3 +116,28 @@ target_link_libraries(rotorboard_logger_tests PRIVATE
 )
 
 add_test(NAME rotorboard_logger_tests COMMAND rotorboard_logger_tests)
+
+qt_add_executable(rotorboard_mavlink_tests
+    tests/MavlinkTelemetrySourceTest.cpp
+    src/model/MotorTelemetry.h
+    src/model/MotorTelemetry.cpp
+    src/telemetry/TelemetrySource.h
+    src/telemetry/TelemetrySource.cpp
+    src/telemetry/MavlinkParser.h
+    src/telemetry/MavlinkParser.cpp
+    src/telemetry/MavlinkTelemetrySource.h
+    src/telemetry/MavlinkTelemetrySource.cpp
+)
+
+target_include_directories(rotorboard_mavlink_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${MAVLINK_INCLUDE_DIR}
+)
+
+target_link_libraries(rotorboard_mavlink_tests PRIVATE
+    Qt6::Core
+    Qt6::Network
+    Qt6::Test
+)
+
+add_test(NAME rotorboard_mavlink_tests COMMAND rotorboard_mavlink_tests)

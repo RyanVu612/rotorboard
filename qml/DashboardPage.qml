@@ -44,7 +44,7 @@ Rectangle {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "Fake source"
+                    text: root.controller.sourceLabel
                     color: "#c9d2d8"
                     font.pixelSize: 13
                     font.weight: Font.Medium

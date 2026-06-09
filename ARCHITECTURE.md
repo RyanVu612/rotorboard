@@ -126,6 +126,9 @@ CsvPlaybackSource  ──► TelemetrySource     (replay files)
 | `FakeTelemetrySource` | **Implemented:** 4 motors, ~10 Hz (`QTimer` at 100 ms), randomized realistic ranges |
 | `TelemetryManager` | **Implemented:** Owns active source, connects signals to the store, periodic stale check, optional CSV logging |
 | `CsvPlaybackSource` | **Implemented:** Reads logged CSV and emits samples on a timeline |
+| `MavlinkTelemetrySource` | **Implemented:** UDP listener; parses `ESC_STATUS` (msg 291) into `MotorTelemetry` |
+| `MavlinkParser` | **Implemented:** Byte-stream MAVLink v2 parser (`mavlink_parse_char`) |
+| `TelemetrySourceFactory` | **Implemented:** Builds fake, playback, or MAVLink source from `SourceConfig` |
 
 Protocol parsing (CAN frames, MAVLink messages, byte layouts) lives **only** inside concrete sources—not in QML or the list model.
 
@@ -185,7 +188,7 @@ QML binds to roles (e.g. `display: rpm`, `display: warningLevel`). Do not expose
 
 ### 6. Application entry (`src/main.cpp`)
 
-**Today:** `QGuiApplication` + `QQmlApplicationEngine`, `AppController` wires `TelemetryManager` + `MotorTelemetryModel`, loads `qml/Main.qml`. CLI flags: `--log [path]` (record session CSV; default `logs/session-YYYYMMDD-HHMMSS.csv`, bare filenames land in `logs/`), `--playback path` (replay CSV instead of fake source).
+**Today:** `QGuiApplication` + `QQmlApplicationEngine`, `AppController` wires `TelemetryManager` + `MotorTelemetryModel`, loads `qml/Main.qml`. CLI flags: `--log [path]` (record session CSV; default `logs/session-YYYYMMDD-HHMMSS.csv`, bare filenames land in `logs/`), `--playback path` (replay CSV instead of fake source), `--mavlink [host:port]` (UDP MAVLink input; default `0.0.0.0:14550`). `--playback` and `--mavlink` are mutually exclusive (MAVLink wins if both are passed). `AppController.sourceLabel` drives the dashboard source badge.
 
 ### 7. QML UI (`qml/`)
 
@@ -221,6 +224,10 @@ rotorboard/
 │   │   ├── TelemetrySource.h / .cpp
 │   │   ├── FakeTelemetrySource.h / .cpp
 │   │   ├── CsvPlaybackSource.h / .cpp
+│   │   ├── MavlinkParser.h / .cpp
+│   │   ├── MavlinkTelemetrySource.h / .cpp
+│   │   ├── TelemetrySourceConfig.h
+│   │   ├── TelemetrySourceFactory.h / .cpp
 │   │   └── TelemetryManager.h / .cpp
 │   ├── store/
 │   │   └── MotorTelemetryModel.h / .cpp
@@ -234,6 +241,10 @@ rotorboard/
 │
 ├── samples/
 │   └── session.csv                        (example playback file)
+│
+├── third_party/
+│   ├── README.md                          (MAVLink header setup)
+│   └── mavlink_c/                         (clone from mavlink/c_library_v2)
 │
 └── qml/
     ├── Main.qml
@@ -257,7 +268,8 @@ rotorboard/
 | QML dashboard (`Qt6::Quick`, `qt_add_qml_module`) | Done |
 | `CsvTelemetryLogger` | Done |
 | `CsvPlaybackSource` (timer, CLI `--playback`) | Done |
-| MAVLink / DroneCAN | Not started |
+| `MavlinkTelemetrySource` (UDP, `ESC_STATUS`, CLI `--mavlink`) | Done |
+| DroneCAN / HOBBYWING | Not started |
 
 ---
 
@@ -271,7 +283,7 @@ Build order keeps protocol complexity out of the UI until the pipeline is solid:
 4. **Warning evaluation** — done (`MotorWarningEvaluator`, `warningLevel` role)
 5. **CSV logging** — done (`CsvTelemetryLogger`, `--log` / `startLogging`)
 6. **CSV playback** — done (`CsvPlaybackSource`, `--playback`, `samples/session.csv`)
-7. **MAVLink input**
+7. **MAVLink input** — done (`MavlinkTelemetrySource`, UDP + `ESC_STATUS`, `--mavlink`)
 8. **DroneCAN / HOBBYWING input**
 9. **Advanced widgets** (charts, layouts)
 
@@ -299,10 +311,17 @@ cmake --build build
 ./build/rotorboard_app --log custom.csv
 ./build/rotorboard_app --log /tmp/session.csv
 ./build/rotorboard_app --playback samples/session.csv
+./build/rotorboard_app --mavlink
+./build/rotorboard_app --mavlink 127.0.0.1:14550
+./build/rotorboard_app --mavlink --log
 ctest --test-dir build
 ```
 
-The dashboard opens a Qt Quick window. Use `--log` to record telemetry to CSV during a session (defaults to timestamped files under repo `logs/`), or `--playback` to replay a logged file instead of the fake source.
+The dashboard opens a Qt Quick window. Use `--log` to record telemetry to CSV during a session (defaults to timestamped files under repo `logs/`), `--playback` to replay a logged file, or `--mavlink` to listen for MAVLink `ESC_STATUS` over UDP (default port 14550).
+
+**MAVLink setup:** Clone headers once: `git clone --depth 1 https://github.com/mavlink/c_library_v2.git third_party/mavlink_c` (see `third_party/README.md`).
+
+**Manual MAVLink test:** Run the app with `--mavlink`, then forward `ESC_STATUS` packets to UDP port 14550 (e.g. via pymavlink, mavlink-router, or a flight controller telemetry output).
 
 ---
 
