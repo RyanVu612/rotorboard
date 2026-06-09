@@ -6,6 +6,7 @@ AppController::AppController(const SourceConfig &config, QObject *parent)
     : QObject(parent)
     , m_sourceLabel(sourceLabelFor(config))
     , m_telemetryModel(this)
+    , m_layoutModel(this)
     , m_telemetryManager(&m_telemetryModel, this)
 {
     m_telemetryManager.setSource(makeTelemetrySource(config));
@@ -21,9 +22,47 @@ QObject *AppController::telemetryModel()
     return &m_telemetryModel;
 }
 
+QObject *AppController::layoutModel()
+{
+    return &m_layoutModel;
+}
+
 QString AppController::sourceLabel() const
 {
     return m_sourceLabel;
+}
+
+bool AppController::chartsFrozen() const
+{
+    return m_chartsFrozen;
+}
+
+void AppController::setChartsFrozen(bool frozen)
+{
+    if (m_chartsFrozen == frozen) {
+        return;
+    }
+    m_chartsFrozen = frozen;
+    emit chartsFrozenChanged();
+}
+
+void AppController::toggleChartsFrozen()
+{
+    setChartsFrozen(!m_chartsFrozen);
+}
+
+bool AppController::editMode() const
+{
+    return m_editMode;
+}
+
+void AppController::setEditMode(bool enabled)
+{
+    if (m_editMode == enabled) {
+        return;
+    }
+    m_editMode = enabled;
+    emit editModeChanged();
 }
 
 void AppController::start()

@@ -12,6 +12,7 @@
 class MotorTelemetryModel : public QAbstractListModel
 {
     Q_OBJECT
+    Q_PROPERTY(int sampleRevision READ sampleRevision NOTIFY sampleRevisionChanged)
 
 public:
     enum Role {
@@ -27,11 +28,15 @@ public:
         WarningLevelRole,
         RpmHistoryRole,
         CurrentHistoryRole,
-        TemperatureHistoryRole
+        TemperatureHistoryRole,
+        VoltageHistoryRole,
+        PwmHistoryRole
     };
     Q_ENUM(Role)
 
     explicit MotorTelemetryModel(QObject *parent = nullptr);
+
+    int sampleRevision() const;
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
@@ -40,12 +45,26 @@ public:
     void updateTelemetry(const MotorTelemetry &telemetry);
     void refreshStaleState(qint64 nowMillis, qint64 staleThresholdMillis);
 
+    Q_INVOKABLE QVariant valueForMetric(int motorId, const QString &metric) const;
+    Q_INVOKABLE QVariantList historyForMetric(int motorId, const QString &metric) const;
+    Q_INVOKABLE int rowForMotorId(int motorId) const;
+    Q_INVOKABLE bool isMotorStale(int motorId) const;
+    Q_INVOKABLE int warningLevelForMotor(int motorId) const;
+    Q_INVOKABLE QString statusForMotor(int motorId) const;
+    Q_INVOKABLE int motorIdAt(int row) const;
+
+signals:
+    void sampleRevisionChanged();
+
 private:
+    void bumpSampleRevision();
     struct MotorRow {
         MotorTelemetry telemetry;
         MotorSampleRingBuffer rpmHistory;
         MotorSampleRingBuffer currentHistory;
         MotorSampleRingBuffer temperatureHistory;
+        MotorSampleRingBuffer voltageHistory;
+        MotorSampleRingBuffer pwmHistory;
         bool isStale = false;
         WarningLevel warningLevel = WarningLevel::Ok;
     };
@@ -56,4 +75,5 @@ private:
     QVector<MotorRow> m_rows;
     QHash<int, int> m_rowByMotorId;
     MotorWarningEvaluator m_warningEvaluator;
+    int m_sampleRevision = 0;
 };

@@ -6,18 +6,7 @@ Rectangle {
 
     required property var controller
 
-    readonly property int layoutModeCompact: 0
-    readonly property int layoutModeDetailed: 1
-
     color: "#101418"
-
-    Settings {
-        id: dashboardSettings
-        category: "Dashboard"
-        property int layoutMode: root.layoutModeDetailed
-    }
-
-    property alias layoutMode: dashboardSettings.layoutMode
 
     Column {
         anchors.fill: parent
@@ -53,45 +42,51 @@ Rectangle {
                 spacing: 12
 
                 Rectangle {
-                    width: layoutToggleRow.width + 8
+                    width: pauseLabel.implicitWidth + 20
                     height: 34
                     radius: 5
-                    color: "#182028"
-                    border.color: "#2c3843"
+                    color: root.controller.chartsFrozen ? "#493316" : "#182028"
+                    border.color: root.controller.chartsFrozen ? "#c58b2c" : "#2c3843"
 
-                    Row {
-                        id: layoutToggleRow
+                    Text {
+                        id: pauseLabel
                         anchors.centerIn: parent
-                        spacing: 2
+                        text: root.controller.chartsFrozen ? "Resume" : "Pause"
+                        color: root.controller.chartsFrozen ? "#ffd18a" : "#c9d2d8"
+                        font.pixelSize: 13
+                        font.weight: Font.Medium
+                    }
 
-                        Repeater {
-                            model: [
-                                {label: "Compact", mode: root.layoutModeCompact},
-                                {label: "Detailed", mode: root.layoutModeDetailed}
-                            ]
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.controller.toggleChartsFrozen()
+                    }
+                }
 
-                            Rectangle {
-                                width: layoutLabel.implicitWidth + 20
-                                height: 28
-                                radius: 4
-                                color: root.layoutMode === modelData.mode ? "#2a3640" : "transparent"
-                                border.color: root.layoutMode === modelData.mode ? "#3d4d59" : "transparent"
+                Rectangle {
+                    width: editLabel.implicitWidth + 20
+                    height: 34
+                    radius: 5
+                    color: root.controller.editMode ? "#2a3640" : "#182028"
+                    border.color: root.controller.editMode ? "#3d4d59" : "#2c3843"
 
-                                Text {
-                                    id: layoutLabel
-                                    anchors.centerIn: parent
-                                    text: modelData.label
-                                    color: root.layoutMode === modelData.mode ? "#e2e8ec" : "#8b98a1"
-                                    font.pixelSize: 12
-                                    font.weight: root.layoutMode === modelData.mode ? Font.Medium : Font.Normal
-                                }
+                    Text {
+                        id: editLabel
+                        anchors.centerIn: parent
+                        text: root.controller.editMode ? "Done" : "Edit layout"
+                        color: "#c9d2d8"
+                        font.pixelSize: 13
+                        font.weight: Font.Medium
+                    }
 
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.layoutMode = modelData.mode
-                                }
-                            }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.controller.editMode = !root.controller.editMode
+                            if (!root.controller.editMode && dashboardGrid)
+                                dashboardGrid.pendingWidgetType = ""
                         }
                     }
                 }
@@ -115,11 +110,27 @@ Rectangle {
             }
         }
 
-        MotorGrid {
+        Row {
             width: parent.width
             height: parent.height - y
-            model: root.controller.telemetryModel
-            layoutMode: root.layoutMode
+            spacing: 16
+
+            DashboardGrid {
+                id: dashboardGrid
+                width: root.controller.editMode ? parent.width - widgetPalette.width - parent.spacing : parent.width
+                height: parent.height
+                telemetryModel: root.controller.telemetryModel
+                layoutModel: root.controller.layoutModel
+                chartsFrozen: root.controller.chartsFrozen
+                editMode: root.controller.editMode
+            }
+
+            WidgetPalette {
+                id: widgetPalette
+                height: parent.height
+                controller: root.controller
+                dashboardGrid: dashboardGrid
+            }
         }
     }
 }

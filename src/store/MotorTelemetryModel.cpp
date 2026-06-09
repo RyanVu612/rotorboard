@@ -22,6 +22,17 @@ MotorTelemetryModel::MotorTelemetryModel(QObject *parent)
 {
 }
 
+int MotorTelemetryModel::sampleRevision() const
+{
+    return m_sampleRevision;
+}
+
+void MotorTelemetryModel::bumpSampleRevision()
+{
+    ++m_sampleRevision;
+    emit sampleRevisionChanged();
+}
+
 int MotorTelemetryModel::rowCount(const QModelIndex &parent) const
 {
     if (parent.isValid()) {
@@ -67,6 +78,10 @@ QVariant MotorTelemetryModel::data(const QModelIndex &index, int role) const
         return historyToVariantList(row.currentHistory);
     case TemperatureHistoryRole:
         return historyToVariantList(row.temperatureHistory);
+    case VoltageHistoryRole:
+        return historyToVariantList(row.voltageHistory);
+    case PwmHistoryRole:
+        return historyToVariantList(row.pwmHistory);
     default:
         return {};
     }
@@ -87,8 +102,111 @@ QHash<int, QByteArray> MotorTelemetryModel::roleNames() const
         {WarningLevelRole, "warningLevel"},
         {RpmHistoryRole, "rpmHistory"},
         {CurrentHistoryRole, "currentHistory"},
-        {TemperatureHistoryRole, "temperatureHistory"}
+        {TemperatureHistoryRole, "temperatureHistory"},
+        {VoltageHistoryRole, "voltageHistory"},
+        {PwmHistoryRole, "pwmHistory"}
     };
+}
+
+QVariant MotorTelemetryModel::valueForMetric(int motorId, const QString &metric) const
+{
+    const auto existing = m_rowByMotorId.constFind(motorId);
+    if (existing == m_rowByMotorId.constEnd()) {
+        return metric == QLatin1String("status") ? QVariant(QString()) : QVariant(0.0);
+    }
+
+    const MotorTelemetry &telemetry = m_rows.at(*existing).telemetry;
+    if (metric == QLatin1String("rpm")) {
+        return telemetry.rpm;
+    }
+    if (metric == QLatin1String("voltage")) {
+        return telemetry.voltage;
+    }
+    if (metric == QLatin1String("current")) {
+        return telemetry.current;
+    }
+    if (metric == QLatin1String("temperatureCelsius")) {
+        return telemetry.temperatureCelsius;
+    }
+    if (metric == QLatin1String("pwm")) {
+        return telemetry.pwm;
+    }
+    if (metric == QLatin1String("status")) {
+        return telemetry.status;
+    }
+
+    return metric == QLatin1String("status") ? QVariant(QString()) : QVariant(0.0);
+}
+
+QVariantList MotorTelemetryModel::historyForMetric(int motorId, const QString &metric) const
+{
+    const auto existing = m_rowByMotorId.constFind(motorId);
+    if (existing == m_rowByMotorId.constEnd()) {
+        return {};
+    }
+
+    const MotorRow &row = m_rows.at(*existing);
+    if (metric == QLatin1String("rpm")) {
+        return historyToVariantList(row.rpmHistory);
+    }
+    if (metric == QLatin1String("voltage")) {
+        return historyToVariantList(row.voltageHistory);
+    }
+    if (metric == QLatin1String("current")) {
+        return historyToVariantList(row.currentHistory);
+    }
+    if (metric == QLatin1String("temperatureCelsius")) {
+        return historyToVariantList(row.temperatureHistory);
+    }
+    if (metric == QLatin1String("pwm")) {
+        return historyToVariantList(row.pwmHistory);
+    }
+
+    return {};
+}
+
+int MotorTelemetryModel::rowForMotorId(int motorId) const
+{
+    const auto existing = m_rowByMotorId.constFind(motorId);
+    if (existing == m_rowByMotorId.constEnd()) {
+        return -1;
+    }
+    return *existing;
+}
+
+bool MotorTelemetryModel::isMotorStale(int motorId) const
+{
+    const auto existing = m_rowByMotorId.constFind(motorId);
+    if (existing == m_rowByMotorId.constEnd()) {
+        return true;
+    }
+    return m_rows.at(*existing).isStale;
+}
+
+int MotorTelemetryModel::warningLevelForMotor(int motorId) const
+{
+    const auto existing = m_rowByMotorId.constFind(motorId);
+    if (existing == m_rowByMotorId.constEnd()) {
+        return static_cast<int>(WarningLevel::Stale);
+    }
+    return static_cast<int>(m_rows.at(*existing).warningLevel);
+}
+
+QString MotorTelemetryModel::statusForMotor(int motorId) const
+{
+    const auto existing = m_rowByMotorId.constFind(motorId);
+    if (existing == m_rowByMotorId.constEnd()) {
+        return {};
+    }
+    return m_rows.at(*existing).telemetry.status;
+}
+
+int MotorTelemetryModel::motorIdAt(int row) const
+{
+    if (row < 0 || row >= m_rows.size()) {
+        return 0;
+    }
+    return m_rows.at(row).telemetry.motorId;
 }
 
 void MotorTelemetryModel::updateTelemetry(const MotorTelemetry &telemetry)
@@ -105,8 +223,11 @@ void MotorTelemetryModel::updateTelemetry(const MotorTelemetry &telemetry)
         newRow.rpmHistory.push(telemetry.rpm);
         newRow.currentHistory.push(telemetry.current);
         newRow.temperatureHistory.push(telemetry.temperatureCelsius);
+        newRow.voltageHistory.push(telemetry.voltage);
+        newRow.pwmHistory.push(telemetry.pwm);
         m_rows.push_back(newRow);
         endInsertRows();
+        bumpSampleRevision();
         return;
     }
 
@@ -117,13 +238,17 @@ void MotorTelemetryModel::updateTelemetry(const MotorTelemetry &telemetry)
     row.rpmHistory.push(telemetry.rpm);
     row.currentHistory.push(telemetry.current);
     row.temperatureHistory.push(telemetry.temperatureCelsius);
+    row.voltageHistory.push(telemetry.voltage);
+    row.pwmHistory.push(telemetry.pwm);
 
     const QModelIndex changedIndex = index(*existing);
     emit dataChanged(changedIndex, changedIndex, rolesForSampleUpdate());
+    bumpSampleRevision();
 }
 
 void MotorTelemetryModel::refreshStaleState(qint64 nowMillis, qint64 staleThresholdMillis)
 {
+    bool changed = false;
     for (int rowIndex = 0; rowIndex < m_rows.size(); ++rowIndex) {
         MotorRow &row = m_rows[rowIndex];
         const bool isStale = nowMillis - row.telemetry.timestampMillis > staleThresholdMillis;
@@ -135,9 +260,14 @@ void MotorTelemetryModel::refreshStaleState(qint64 nowMillis, qint64 staleThresh
 
         row.isStale = isStale;
         row.warningLevel = warningLevel;
+        changed = true;
 
         const QModelIndex changedIndex = index(rowIndex);
         emit dataChanged(changedIndex, changedIndex, rolesForStaleUpdate());
+    }
+
+    if (changed) {
+        bumpSampleRevision();
     }
 }
 
@@ -156,7 +286,9 @@ QVector<int> MotorTelemetryModel::rolesForSampleUpdate() const
         WarningLevelRole,
         RpmHistoryRole,
         CurrentHistoryRole,
-        TemperatureHistoryRole
+        TemperatureHistoryRole,
+        VoltageHistoryRole,
+        PwmHistoryRole
     };
 }
 

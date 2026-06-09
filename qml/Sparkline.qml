@@ -20,14 +20,15 @@ Canvas {
         const ctx = getContext("2d")
         ctx.clearRect(0, 0, width, height)
 
-        if (!values || values.length < 2 || width <= 0 || height <= 0) {
+        const series = root.values
+        if (!series || series.length < 2 || width <= 0 || height <= 0) {
             return
         }
 
-        let minValue = values[0]
-        let maxValue = values[0]
-        for (let i = 1; i < values.length; ++i) {
-            const value = values[i]
+        let minValue = series[0]
+        let maxValue = series[0]
+        for (let i = 1; i < series.length; ++i) {
+            const value = series[i]
             if (value < minValue) {
                 minValue = value
             }
@@ -40,14 +41,14 @@ Canvas {
         const padding = 2
         const plotHeight = height - (padding * 2)
         const plotWidth = width - (padding * 2)
-        const xStep = plotWidth / (values.length - 1)
+        const xStep = plotWidth / (series.length - 1)
 
         ctx.beginPath()
         ctx.lineWidth = 1.5
         ctx.strokeStyle = dimmed ? "#879199" : strokeColor
 
-        for (let i = 0; i < values.length; ++i) {
-            const normalized = range === 0 ? 0.5 : (values[i] - minValue) / range
+        for (let i = 0; i < series.length; ++i) {
+            const normalized = range === 0 ? 0.5 : (series[i] - minValue) / range
             const x = padding + (i * xStep)
             const y = padding + plotHeight - (normalized * plotHeight)
 

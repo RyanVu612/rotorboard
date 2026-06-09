@@ -63,6 +63,8 @@ qt_add_executable(rotorboard_app
     src/store/MotorSampleRingBuffer.cpp
     src/store/MotorTelemetryModel.h
     src/store/MotorTelemetryModel.cpp
+    src/store/DashboardLayoutModel.h
+    src/store/DashboardLayoutModel.cpp
     src/warnings/MotorWarningEvaluator.h
     src/warnings/MotorWarningEvaluator.cpp
     ${ROTORBOARD_MAVLINK_SOURCES}
@@ -71,11 +73,15 @@ qt_add_executable(rotorboard_app
 
 set_source_files_properties(qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
 set_source_files_properties(qml/DashboardPage.qml PROPERTIES QT_RESOURCE_ALIAS DashboardPage.qml)
-set_source_files_properties(qml/MotorGrid.qml PROPERTIES QT_RESOURCE_ALIAS MotorGrid.qml)
-set_source_files_properties(qml/MotorCard.qml PROPERTIES QT_RESOURCE_ALIAS MotorCard.qml)
-set_source_files_properties(qml/MotorCardSlot.qml PROPERTIES QT_RESOURCE_ALIAS MotorCardSlot.qml)
+set_source_files_properties(qml/DashboardGrid.qml PROPERTIES QT_RESOURCE_ALIAS DashboardGrid.qml)
+set_source_files_properties(qml/WidgetPalette.qml PROPERTIES QT_RESOURCE_ALIAS WidgetPalette.qml)
+set_source_files_properties(qml/MetricUtils.js PROPERTIES QT_RESOURCE_ALIAS MetricUtils.js)
 set_source_files_properties(qml/StatusBadge.qml PROPERTIES QT_RESOURCE_ALIAS StatusBadge.qml)
 set_source_files_properties(qml/Sparkline.qml PROPERTIES QT_RESOURCE_ALIAS Sparkline.qml)
+set_source_files_properties(qml/widgets/ValueTile.qml PROPERTIES QT_RESOURCE_ALIAS widgets/ValueTile.qml)
+set_source_files_properties(qml/widgets/ChartTile.qml PROPERTIES QT_RESOURCE_ALIAS widgets/ChartTile.qml)
+set_source_files_properties(qml/widgets/MotorSummaryCard.qml PROPERTIES QT_RESOURCE_ALIAS widgets/MotorSummaryCard.qml)
+set_source_files_properties(qml/widgets/DashboardWidgetSlot.qml PROPERTIES QT_RESOURCE_ALIAS widgets/DashboardWidgetSlot.qml)
 
 qt_add_qml_module(rotorboard_app
     URI Rotorboard
@@ -83,11 +89,15 @@ qt_add_qml_module(rotorboard_app
     QML_FILES
         qml/Main.qml
         qml/DashboardPage.qml
-        qml/MotorGrid.qml
-        qml/MotorCard.qml
-        qml/MotorCardSlot.qml
+        qml/DashboardGrid.qml
+        qml/WidgetPalette.qml
+        qml/MetricUtils.js
         qml/StatusBadge.qml
         qml/Sparkline.qml
+        qml/widgets/ValueTile.qml
+        qml/widgets/ChartTile.qml
+        qml/widgets/MotorSummaryCard.qml
+        qml/widgets/DashboardWidgetSlot.qml
 )
 
 target_include_directories(rotorboard_app PRIVATE
