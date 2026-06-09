@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtCore
 
 Flickable {
@@ -19,9 +20,26 @@ Flickable {
 
     clip: true
     boundsBehavior: Flickable.StopAtBounds
-    interactive: false
+    flickableDirection: Flickable.VerticalFlick
+    interactive: dragLockCount === 0
     contentWidth: gridColumns * cellWidth
     contentHeight: gridRows * cellHeight
+
+    ScrollBar.vertical: ScrollBar {
+        policy: ScrollBar.AsNeeded
+
+        contentItem: Rectangle {
+            implicitWidth: 6
+            radius: 3
+            color: pressed ? "#5a6a75" : hovered ? "#4a5862" : "#3a4852"
+        }
+
+        background: Rectangle {
+            implicitWidth: 8
+            color: "#141a20"
+            radius: 4
+        }
+    }
 
     Settings {
         id: gridSettings

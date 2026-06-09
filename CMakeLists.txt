@@ -11,7 +11,7 @@ function(rotorboard_configure_libcanard target_name)
     target_compile_definitions(${target_name} PRIVATE CANARD_64_BIT=1)
 endfunction()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Network SerialPort Test)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Network SerialPort Test)
 
 qt_standard_project_setup(REQUIRES 6.5)
 
@@ -103,6 +103,7 @@ target_link_libraries(rotorboard_app PRIVATE
     Qt6::Gui
     Qt6::Qml
     Qt6::Quick
+    Qt6::QuickControls2
     Qt6::Network
     Qt6::SerialPort
 )
