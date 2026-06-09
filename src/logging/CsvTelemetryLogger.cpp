@@ -85,4 +85,5 @@ void CsvTelemetryLogger::logSample(const MotorTelemetry &telemetry, qint64 sessi
              << telemetry.temperatureCelsius << ','
              << telemetry.pwm << ','
              << telemetry.status << '\n';
+    m_stream.flush();
 }

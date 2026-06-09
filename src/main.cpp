@@ -40,6 +40,7 @@ int main (int argc, char *argv[])
     SourceConfig sourceConfig;
     bool playbackRequested = false;
     bool mavlinkRequested = false;
+    bool dronecanRequested = false;
 
     const QStringList args = app.arguments();
     for (int i = 1; i < args.size(); ++i) {
@@ -66,12 +67,24 @@ int main (int argc, char *argv[])
                     qWarning() << "Invalid --mavlink endpoint" << endpoint << "(expected host:port)";
                 }
             }
+        } else if (args.at(i) == QLatin1String("--dronecan")) {
+            sourceConfig.kind = SourceKind::DroneCan;
+            dronecanRequested = true;
+            if (i + 1 < args.size() && !args.at(i + 1).startsWith(QLatin1Char('-'))) {
+                sourceConfig.dronecanPort = args.at(++i);
+            }
         }
     }
 
-    if (playbackRequested && mavlinkRequested) {
-        qWarning() << "--playback and --mavlink are mutually exclusive; using MAVLink source";
-        sourceConfig.kind = SourceKind::Mavlink;
+    const int liveSourceCount = (playbackRequested ? 1 : 0) + (mavlinkRequested ? 1 : 0) + (dronecanRequested ? 1 : 0);
+    if (liveSourceCount > 1) {
+        if (dronecanRequested) {
+            qWarning() << "Multiple telemetry sources requested; using DroneCAN source";
+            sourceConfig.kind = SourceKind::DroneCan;
+        } else if (mavlinkRequested) {
+            qWarning() << "Multiple telemetry sources requested; using MAVLink source";
+            sourceConfig.kind = SourceKind::Mavlink;
+        }
         sourceConfig.playbackPath.clear();
     }
 

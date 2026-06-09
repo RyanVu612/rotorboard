@@ -269,7 +269,7 @@ rotorboard/
 | `CsvTelemetryLogger` | Done |
 | `CsvPlaybackSource` (timer, CLI `--playback`) | Done |
 | `MavlinkTelemetrySource` (UDP, `ESC_STATUS`, CLI `--mavlink`) | Done |
-| DroneCAN / HOBBYWING | Not started |
+| `DroneCanTelemetrySource` (HOBBYWING StatusMsg1/2/3, SLCAN, CLI `--dronecan`) | Done |
 
 ---
 
@@ -284,7 +284,7 @@ Build order keeps protocol complexity out of the UI until the pipeline is solid:
 5. **CSV logging** — done (`CsvTelemetryLogger`, `--log` / `startLogging`)
 6. **CSV playback** — done (`CsvPlaybackSource`, `--playback`, `samples/session.csv`)
 7. **MAVLink input** — done (`MavlinkTelemetrySource`, UDP + `ESC_STATUS`, `--mavlink`)
-8. **DroneCAN / HOBBYWING input**
+8. **DroneCAN / HOBBYWING input** — done (`DroneCanTelemetrySource`, `SlcanTransport`, HOBBYWING StatusMsg1/2/3 merge cache, `--dronecan`)
 9. **Advanced widgets** (charts, layouts)
 
 ---
@@ -313,15 +313,22 @@ cmake --build build
 ./build/rotorboard_app --playback samples/session.csv
 ./build/rotorboard_app --mavlink
 ./build/rotorboard_app --mavlink 127.0.0.1:14550
-./build/rotorboard_app --mavlink --log
+./build/rotorboard_app --dronecan COM3
+./build/rotorboard_app --dronecan COM3 --log
 ctest --test-dir build
 ```
 
-The dashboard opens a Qt Quick window. Use `--log` to record telemetry to CSV during a session (defaults to timestamped files under repo `logs/`), `--playback` to replay a logged file, or `--mavlink` to listen for MAVLink `ESC_STATUS` over UDP (default port 14550).
+The dashboard opens a Qt Quick window. Use `--log` to record telemetry to CSV during a session (defaults to timestamped files under repo `logs/`), `--playback` to replay a logged file, `--mavlink` to listen for MAVLink `ESC_STATUS` over UDP (default port 14550), or `--dronecan` to read HOBBYWING DroneCAN telemetry over SLCAN serial.
 
 **MAVLink setup:** Clone headers once: `git clone --depth 1 https://github.com/mavlink/c_library_v2.git third_party/mavlink_c` (see `third_party/README.md`).
 
+**DroneCAN setup:** Clone libcanard once: `git clone --depth 1 https://github.com/UAVCAN/libcanard.git third_party/libcanard`. HOBBYWING DSDL definitions are vendored under `third_party/hobbywing_dsdl/`; decoding is in `src/telemetry/dronecan/HobbywingMessages.cpp`.
+
 **Manual MAVLink test:** Run the app with `--mavlink`, then forward `ESC_STATUS` packets to UDP port 14550 (e.g. via pymavlink, mavlink-router, or a flight controller telemetry output).
+
+**Manual DroneCAN test:** Connect a USB-CAN dongle running SLCAN firmware to the HOBBYWING CAN bus, then run `rotorboard --dronecan COMx` (replace `COMx` with the serial port). Unit tests use canned HOBBYWING frames via `rotorboard_dronecan_tests`.
+
+**HOBBYWING field mapping (v1):** `StatusMsg1` → RPM, PWM, fault status; `StatusMsg2` → bus voltage, current, temperature; `StatusMsg3` → MOS/cap/motor temperatures (used when Msg2 temp is absent). ESC node ID maps to `motorId`. MAVLink `ESC_STATUS` has no temperature field; DroneCAN provides MOS/cap temps.
 
 ---
 

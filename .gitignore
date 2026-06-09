@@ -8,6 +8,12 @@ logs/*.csv
 # MAVLink C headers (clone per third_party/README.md)
 third_party/mavlink_c/
 
+# DroneCAN tooling (clone per third_party/README.md)
+third_party/libcanard/
+third_party/dronecan_dsdl/
+third_party/dronecan_dsdlc/
+third_party/dronecan_generated/
+
 # Qt Creator local IDE settings
 CMakeLists.txt.user*
 *.user

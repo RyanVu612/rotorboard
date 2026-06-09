@@ -1,12 +1,17 @@
 cmake_minimum_required(VERSION 3.21)
-project(rotorboard VERSION 0.1.0 LANGUAGES CXX)
+project(rotorboard VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(MAVLINK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mavlink_c/common)
+set(LIBCANARD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libcanard)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Network Test)
+function(rotorboard_configure_libcanard target_name)
+    target_compile_definitions(${target_name} PRIVATE CANARD_64_BIT=1)
+endfunction()
+
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Network SerialPort Test)
 
 qt_standard_project_setup(REQUIRES 6.5)
 
@@ -18,6 +23,23 @@ set(ROTORBOARD_MAVLINK_SOURCES
     src/telemetry/TelemetrySourceConfig.h
     src/telemetry/TelemetrySourceFactory.h
     src/telemetry/TelemetrySourceFactory.cpp
+)
+
+set(LIBCANARD_C_SOURCE ${LIBCANARD_DIR}/canard.c)
+set_source_files_properties(${LIBCANARD_C_SOURCE} PROPERTIES LANGUAGE C)
+
+set(ROTORBOARD_DRONECAN_SOURCES
+    src/telemetry/DroneCanTelemetrySource.h
+    src/telemetry/DroneCanTelemetrySource.cpp
+    src/telemetry/SlcanTransport.h
+    src/telemetry/SlcanTransport.cpp
+    src/telemetry/dronecan/DroneCanFrameParser.h
+    src/telemetry/dronecan/DroneCanFrameParser.cpp
+    src/telemetry/dronecan/DroneCanMotorCache.h
+    src/telemetry/dronecan/DroneCanMotorCache.cpp
+    src/telemetry/dronecan/HobbywingMessages.h
+    src/telemetry/dronecan/HobbywingMessages.cpp
+    ${LIBCANARD_C_SOURCE}
 )
 
 qt_add_executable(rotorboard_app
@@ -42,6 +64,7 @@ qt_add_executable(rotorboard_app
     src/warnings/MotorWarningEvaluator.h
     src/warnings/MotorWarningEvaluator.cpp
     ${ROTORBOARD_MAVLINK_SOURCES}
+    ${ROTORBOARD_DRONECAN_SOURCES}
 )
 
 set_source_files_properties(qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
@@ -64,6 +87,7 @@ qt_add_qml_module(rotorboard_app
 target_include_directories(rotorboard_app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${MAVLINK_INCLUDE_DIR}
+    ${LIBCANARD_DIR}
 )
 
 target_link_libraries(rotorboard_app PRIVATE
@@ -72,7 +96,10 @@ target_link_libraries(rotorboard_app PRIVATE
     Qt6::Qml
     Qt6::Quick
     Qt6::Network
+    Qt6::SerialPort
 )
+
+rotorboard_configure_libcanard(rotorboard_app)
 
 enable_testing()
 
@@ -141,3 +168,27 @@ target_link_libraries(rotorboard_mavlink_tests PRIVATE
 )
 
 add_test(NAME rotorboard_mavlink_tests COMMAND rotorboard_mavlink_tests)
+
+qt_add_executable(rotorboard_dronecan_tests
+    tests/DroneCanTelemetrySourceTest.cpp
+    src/model/MotorTelemetry.h
+    src/model/MotorTelemetry.cpp
+    src/telemetry/TelemetrySource.h
+    src/telemetry/TelemetrySource.cpp
+    ${ROTORBOARD_DRONECAN_SOURCES}
+)
+
+target_include_directories(rotorboard_dronecan_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${LIBCANARD_DIR}
+)
+
+target_link_libraries(rotorboard_dronecan_tests PRIVATE
+    Qt6::Core
+    Qt6::SerialPort
+    Qt6::Test
+)
+
+rotorboard_configure_libcanard(rotorboard_dronecan_tests)
+
+add_test(NAME rotorboard_dronecan_tests COMMAND rotorboard_dronecan_tests)
