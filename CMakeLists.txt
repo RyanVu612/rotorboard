@@ -73,6 +73,7 @@ set_source_files_properties(qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
 set_source_files_properties(qml/DashboardPage.qml PROPERTIES QT_RESOURCE_ALIAS DashboardPage.qml)
 set_source_files_properties(qml/MotorGrid.qml PROPERTIES QT_RESOURCE_ALIAS MotorGrid.qml)
 set_source_files_properties(qml/MotorCard.qml PROPERTIES QT_RESOURCE_ALIAS MotorCard.qml)
+set_source_files_properties(qml/MotorCardSlot.qml PROPERTIES QT_RESOURCE_ALIAS MotorCardSlot.qml)
 set_source_files_properties(qml/StatusBadge.qml PROPERTIES QT_RESOURCE_ALIAS StatusBadge.qml)
 set_source_files_properties(qml/Sparkline.qml PROPERTIES QT_RESOURCE_ALIAS Sparkline.qml)
 
@@ -84,6 +85,7 @@ qt_add_qml_module(rotorboard_app
         qml/DashboardPage.qml
         qml/MotorGrid.qml
         qml/MotorCard.qml
+        qml/MotorCardSlot.qml
         qml/StatusBadge.qml
         qml/Sparkline.qml
 )

@@ -19,6 +19,7 @@ Rectangle {
 
     readonly property bool compact: layoutMode === 0
 
+    clip: true
     radius: 8
     color: warningLevel === 3 ? "#191d21" : "#161c22"
     border.width: 1
@@ -31,25 +32,25 @@ Rectangle {
 
     Column {
         anchors.fill: parent
-        anchors.margins: 16
-        spacing: root.compact ? 8 : 13
+        anchors.margins: root.compact ? 12 : 12
+        spacing: root.compact ? 6 : 8
 
         Row {
             width: parent.width
-            height: 28
+            height: 24
 
             Text {
-                width: parent.width - 86
+                width: parent.width - 78
                 text: "Motor " + root.motorId
                 color: "#f3f6f7"
-                font.pixelSize: 20
+                font.pixelSize: root.compact ? 18 : 19
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
 
             StatusBadge {
-                width: 86
-                height: 26
+                width: 78
+                height: 24
                 warningLevel: root.warningLevel
             }
         }
@@ -58,13 +59,14 @@ Rectangle {
             width: parent.width
             text: Math.round(root.rpm).toLocaleString(Qt.locale()) + " rpm"
             color: root.isStale ? "#879199" : "#f4f7f8"
-            font.pixelSize: root.compact ? 26 : 32
+            font.pixelSize: root.compact ? 24 : 28
             font.weight: Font.DemiBold
             elide: Text.ElideRight
         }
 
         Sparkline {
             width: parent.width
+            height: root.compact ? 0 : 20
             visible: !root.compact
             values: root.rpmHistory
             strokeColor: "#6eb5d8"
@@ -80,8 +82,8 @@ Rectangle {
         Grid {
             width: parent.width
             columns: 2
-            rowSpacing: root.compact ? 8 : 12
-            columnSpacing: 12
+            rowSpacing: root.compact ? 6 : 8
+            columnSpacing: 10
 
             Repeater {
                 model: [
@@ -93,13 +95,13 @@ Rectangle {
 
                 Column {
                     width: (parent.width - parent.columnSpacing) / 2
-                    spacing: 3
+                    spacing: 2
 
                     Text {
                         width: parent.width
                         text: modelData.label
                         color: "#77858e"
-                        font.pixelSize: 11
+                        font.pixelSize: 10
                         font.capitalization: Font.AllUppercase
                         elide: Text.ElideRight
                     }
@@ -108,14 +110,14 @@ Rectangle {
                         width: parent.width
                         text: modelData.value
                         color: "#d6dde1"
-                        font.pixelSize: root.compact ? 16 : 18
+                        font.pixelSize: root.compact ? 15 : 16
                         font.weight: Font.Medium
                         elide: Text.ElideRight
                     }
 
                     Sparkline {
                         width: parent.width
-                        height: 24
+                        height: root.compact ? 0 : 14
                         visible: !root.compact && modelData.history !== null
                         values: modelData.history || []
                         strokeColor: modelData.color
@@ -125,12 +127,18 @@ Rectangle {
             }
         }
 
-        Text {
+        Item {
             width: parent.width
-            text: root.isStale ? "No recent data" : root.status
-            color: root.isStale ? "#a9b2b8" : "#7ed39a"
-            font.pixelSize: 12
-            elide: Text.ElideRight
+            height: 14
+
+            Text {
+                anchors.fill: parent
+                verticalAlignment: Text.AlignVCenter
+                text: root.isStale ? "No recent data" : root.status
+                color: root.isStale ? "#a9b2b8" : "#7ed39a"
+                font.pixelSize: 11
+                elide: Text.ElideRight
+            }
         }
     }
 }
