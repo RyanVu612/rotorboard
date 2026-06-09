@@ -12,6 +12,7 @@ private slots:
     void updatesExistingRows();
     void marksRowsStale();
     void exposesWarningLevels();
+    void accumulatesHistoryRoles();
 };
 
 namespace {
@@ -90,6 +91,35 @@ void MotorTelemetryModelTest::exposesWarningLevels()
     MotorTelemetry okTelemetry = sampleForMotor(3);
     model.updateTelemetry(okTelemetry);
     QCOMPARE(warningLevelAt(model, 2), static_cast<int>(WarningLevel::Ok));
+}
+
+void MotorTelemetryModelTest::accumulatesHistoryRoles()
+{
+    MotorTelemetryModel model;
+
+    MotorTelemetry first = sampleForMotor(1);
+    first.rpm = 1000.0;
+    first.current = 10.0;
+    first.temperatureCelsius = 40.0;
+    model.updateTelemetry(first);
+
+    MotorTelemetry second = first;
+    second.rpm = 2000.0;
+    second.current = 20.0;
+    second.temperatureCelsius = 50.0;
+    model.updateTelemetry(second);
+
+    const QVariantList rpmHistory = model.data(model.index(0), MotorTelemetryModel::RpmHistoryRole).toList();
+    const QVariantList currentHistory = model.data(model.index(0), MotorTelemetryModel::CurrentHistoryRole).toList();
+    const QVariantList temperatureHistory = model.data(model.index(0), MotorTelemetryModel::TemperatureHistoryRole).toList();
+
+    QCOMPARE(rpmHistory.size(), 2);
+    QCOMPARE(rpmHistory.at(0).toDouble(), 1000.0);
+    QCOMPARE(rpmHistory.at(1).toDouble(), 2000.0);
+    QCOMPARE(currentHistory.at(0).toDouble(), 10.0);
+    QCOMPARE(currentHistory.at(1).toDouble(), 20.0);
+    QCOMPARE(temperatureHistory.at(0).toDouble(), 40.0);
+    QCOMPARE(temperatureHistory.at(1).toDouble(), 50.0);
 }
 
 QTEST_MAIN(MotorTelemetryModelTest)

@@ -12,6 +12,9 @@ Rectangle {
     required property string status
     required property bool isStale
     required property int warningLevel
+    required property var rpmHistory
+    required property var currentHistory
+    required property var temperatureHistory
 
     radius: 8
     color: warningLevel === 3 ? "#191d21" : "#161c22"
@@ -57,6 +60,13 @@ Rectangle {
             elide: Text.ElideRight
         }
 
+        Sparkline {
+            width: parent.width
+            values: root.rpmHistory
+            strokeColor: "#6eb5d8"
+            dimmed: root.isStale
+        }
+
         Rectangle {
             width: parent.width
             height: 1
@@ -71,10 +81,10 @@ Rectangle {
 
             Repeater {
                 model: [
-                    {label: "Voltage", value: root.voltage.toFixed(1) + " V"},
-                    {label: "Current", value: root.current.toFixed(1) + " A"},
-                    {label: "Temp", value: root.temperatureCelsius.toFixed(1) + " C"},
-                    {label: "PWM", value: Math.round(root.pwm).toString()}
+                    {label: "Voltage", value: root.voltage.toFixed(1) + " V", history: null, color: "#7a9eb8"},
+                    {label: "Current", value: root.current.toFixed(1) + " A", history: root.currentHistory, color: "#d4a05c"},
+                    {label: "Temp", value: root.temperatureCelsius.toFixed(1) + " C", history: root.temperatureHistory, color: "#c97d6f"},
+                    {label: "PWM", value: Math.round(root.pwm).toString(), history: null, color: "#7a9eb8"}
                 ]
 
                 Column {
@@ -97,6 +107,15 @@ Rectangle {
                         font.pixelSize: 18
                         font.weight: Font.Medium
                         elide: Text.ElideRight
+                    }
+
+                    Sparkline {
+                        width: parent.width
+                        height: 24
+                        visible: modelData.history !== null
+                        values: modelData.history || []
+                        strokeColor: modelData.color
+                        dimmed: root.isStale
                     }
                 }
             }

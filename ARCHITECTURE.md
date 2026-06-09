@@ -160,6 +160,7 @@ Stale detection itself is **not** in the evaluator alone: the manager/model mark
 
 | Type | Responsibility |
 |------|----------------|
+| `MotorSampleRingBuffer` | **Implemented:** Fixed-capacity ring buffer (120 samples) for per-motor metric history |
 | `MotorTelemetryModel` | **Implemented:** List model with one row per motor; updates on `telemetryReceived`; exposes roles below |
 
 **Suggested model roles:**
@@ -176,8 +177,11 @@ Stale detection itself is **not** in the evaluator alone: the manager/model mark
 | `timestampMillis` | qint64 | Last sample time (epoch ms) |
 | `isStale` | bool | No update within 2 s |
 | `warningLevel` | int / enum | From `MotorWarningEvaluator` |
+| `rpmHistory` | list of double | Recent RPM samples (oldest→newest, display-only) |
+| `currentHistory` | list of double | Recent current samples |
+| `temperatureHistory` | list of double | Recent temperature samples |
 
-QML binds to roles (e.g. `display: rpm`, `display: warningLevel`). Do not expose raw hardware handles or mutable protocol objects to QML.
+History buffers are updated in the store layer on each `updateTelemetry()` call—not in telemetry sources. QML binds to roles (e.g. `display: rpm`, `display: warningLevel`). Do not expose raw hardware handles or mutable protocol objects to QML.
 
 ### 5. Logging (`src/logging/`)
 
@@ -199,10 +203,11 @@ QML binds to roles (e.g. `display: rpm`, `display: warningLevel`). Do not expose
 | `Main.qml` | Window root, loads engine, hosts dashboard |
 | `DashboardPage.qml` | Page chrome, title, layout container |
 | `MotorGrid.qml` | Grid of motor cards bound to the list model |
-| `MotorCard.qml` | Per-motor RPM, voltage, current, temperature, status |
+| `MotorCard.qml` | Per-motor RPM, voltage, current, temperature, status, sparklines |
 | `StatusBadge.qml` | Warning/stale visual (color, label) |
+| `Sparkline.qml` | Canvas-based mini time-series chart (normalized polyline) |
 
-**Implemented:** Cards react to `warningLevel` and `isStale` (border/background). No charts in milestone 1.
+**Implemented:** Cards react to `warningLevel` and `isStale` (border/background). Inline sparklines for RPM, current, and temperature (milestone 9).
 
 ---
 
@@ -230,6 +235,7 @@ rotorboard/
 │   │   ├── TelemetrySourceFactory.h / .cpp
 │   │   └── TelemetryManager.h / .cpp
 │   ├── store/
+│   │   ├── MotorSampleRingBuffer.h / .cpp
 │   │   └── MotorTelemetryModel.h / .cpp
 │   ├── warnings/
 │   │   └── MotorWarningEvaluator.h / .cpp
@@ -251,7 +257,8 @@ rotorboard/
     ├── DashboardPage.qml
     ├── MotorGrid.qml
     ├── MotorCard.qml
-    └── StatusBadge.qml
+    ├── StatusBadge.qml
+    └── Sparkline.qml
 ```
 
 ---
@@ -270,6 +277,8 @@ rotorboard/
 | `CsvPlaybackSource` (timer, CLI `--playback`) | Done |
 | `MavlinkTelemetrySource` (UDP, `ESC_STATUS`, CLI `--mavlink`) | Done |
 | `DroneCanTelemetrySource` (HOBBYWING StatusMsg1/2/3, SLCAN, CLI `--dronecan`) | Done |
+| `MotorSampleRingBuffer` + history model roles | Done |
+| `Sparkline.qml` sparklines on motor cards | Done |
 
 ---
 
@@ -285,7 +294,7 @@ Build order keeps protocol complexity out of the UI until the pipeline is solid:
 6. **CSV playback** — done (`CsvPlaybackSource`, `--playback`, `samples/session.csv`)
 7. **MAVLink input** — done (`MavlinkTelemetrySource`, UDP + `ESC_STATUS`, `--mavlink`)
 8. **DroneCAN / HOBBYWING input** — done (`DroneCanTelemetrySource`, `SlcanTransport`, HOBBYWING StatusMsg1/2/3 merge cache, `--dronecan`)
-9. **Advanced widgets** (charts, layouts)
+9. **Advanced widgets** (charts, layouts) — sparklines done; full-page charts / layout modes remain
 
 ---
 

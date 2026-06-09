@@ -1,5 +1,22 @@
 #include "MotorTelemetryModel.h"
 
+#include <QVariantList>
+
+namespace {
+
+QVariantList historyToVariantList(const MotorSampleRingBuffer &buffer)
+{
+    const QVector<double> values = buffer.orderedValues();
+    QVariantList list;
+    list.reserve(values.size());
+    for (double value : values) {
+        list.push_back(value);
+    }
+    return list;
+}
+
+} // namespace
+
 MotorTelemetryModel::MotorTelemetryModel(QObject *parent)
     : QAbstractListModel(parent)
 {
@@ -44,6 +61,12 @@ QVariant MotorTelemetryModel::data(const QModelIndex &index, int role) const
         return row.isStale;
     case WarningLevelRole:
         return static_cast<int>(row.warningLevel);
+    case RpmHistoryRole:
+        return historyToVariantList(row.rpmHistory);
+    case CurrentHistoryRole:
+        return historyToVariantList(row.currentHistory);
+    case TemperatureHistoryRole:
+        return historyToVariantList(row.temperatureHistory);
     default:
         return {};
     }
@@ -61,7 +84,10 @@ QHash<int, QByteArray> MotorTelemetryModel::roleNames() const
         {StatusRole, "status"},
         {TimestampMillisRole, "timestampMillis"},
         {IsStaleRole, "isStale"},
-        {WarningLevelRole, "warningLevel"}
+        {WarningLevelRole, "warningLevel"},
+        {RpmHistoryRole, "rpmHistory"},
+        {CurrentHistoryRole, "currentHistory"},
+        {TemperatureHistoryRole, "temperatureHistory"}
     };
 }
 
@@ -70,10 +96,16 @@ void MotorTelemetryModel::updateTelemetry(const MotorTelemetry &telemetry)
     const auto existing = m_rowByMotorId.constFind(telemetry.motorId);
 
     if (existing == m_rowByMotorId.constEnd()) {
-        const int row = m_rows.size();
-        beginInsertRows(QModelIndex(), row, row);
-        m_rowByMotorId.insert(telemetry.motorId, row);
-        m_rows.push_back({telemetry, false, m_warningEvaluator.evaluate(telemetry, false)});
+        const int rowIndex = m_rows.size();
+        beginInsertRows(QModelIndex(), rowIndex, rowIndex);
+        m_rowByMotorId.insert(telemetry.motorId, rowIndex);
+        MotorRow newRow;
+        newRow.telemetry = telemetry;
+        newRow.warningLevel = m_warningEvaluator.evaluate(telemetry, false);
+        newRow.rpmHistory.push(telemetry.rpm);
+        newRow.currentHistory.push(telemetry.current);
+        newRow.temperatureHistory.push(telemetry.temperatureCelsius);
+        m_rows.push_back(newRow);
         endInsertRows();
         return;
     }
@@ -82,6 +114,9 @@ void MotorTelemetryModel::updateTelemetry(const MotorTelemetry &telemetry)
     row.telemetry = telemetry;
     row.isStale = false;
     row.warningLevel = m_warningEvaluator.evaluate(telemetry, false);
+    row.rpmHistory.push(telemetry.rpm);
+    row.currentHistory.push(telemetry.current);
+    row.temperatureHistory.push(telemetry.temperatureCelsius);
 
     const QModelIndex changedIndex = index(*existing);
     emit dataChanged(changedIndex, changedIndex, rolesForSampleUpdate());
@@ -118,7 +153,10 @@ QVector<int> MotorTelemetryModel::rolesForSampleUpdate() const
         StatusRole,
         TimestampMillisRole,
         IsStaleRole,
-        WarningLevelRole
+        WarningLevelRole,
+        RpmHistoryRole,
+        CurrentHistoryRole,
+        TemperatureHistoryRole
     };
 }
 

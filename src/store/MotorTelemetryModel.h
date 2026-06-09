@@ -2,6 +2,7 @@
 
 #include "model/MotorTelemetry.h"
 #include "model/WarningLevel.h"
+#include "store/MotorSampleRingBuffer.h"
 #include "warnings/MotorWarningEvaluator.h"
 
 #include <QAbstractListModel>
@@ -23,7 +24,10 @@ public:
         StatusRole,
         TimestampMillisRole,
         IsStaleRole,
-        WarningLevelRole
+        WarningLevelRole,
+        RpmHistoryRole,
+        CurrentHistoryRole,
+        TemperatureHistoryRole
     };
     Q_ENUM(Role)
 
@@ -39,6 +43,9 @@ public:
 private:
     struct MotorRow {
         MotorTelemetry telemetry;
+        MotorSampleRingBuffer rpmHistory;
+        MotorSampleRingBuffer currentHistory;
+        MotorSampleRingBuffer temperatureHistory;
         bool isStale = false;
         WarningLevel warningLevel = WarningLevel::Ok;
     };

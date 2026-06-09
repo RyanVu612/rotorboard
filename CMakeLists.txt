@@ -59,6 +59,8 @@ qt_add_executable(rotorboard_app
     src/telemetry/TelemetryManager.cpp
     src/logging/CsvTelemetryLogger.h
     src/logging/CsvTelemetryLogger.cpp
+    src/store/MotorSampleRingBuffer.h
+    src/store/MotorSampleRingBuffer.cpp
     src/store/MotorTelemetryModel.h
     src/store/MotorTelemetryModel.cpp
     src/warnings/MotorWarningEvaluator.h
@@ -72,6 +74,7 @@ set_source_files_properties(qml/DashboardPage.qml PROPERTIES QT_RESOURCE_ALIAS D
 set_source_files_properties(qml/MotorGrid.qml PROPERTIES QT_RESOURCE_ALIAS MotorGrid.qml)
 set_source_files_properties(qml/MotorCard.qml PROPERTIES QT_RESOURCE_ALIAS MotorCard.qml)
 set_source_files_properties(qml/StatusBadge.qml PROPERTIES QT_RESOURCE_ALIAS StatusBadge.qml)
+set_source_files_properties(qml/Sparkline.qml PROPERTIES QT_RESOURCE_ALIAS Sparkline.qml)
 
 qt_add_qml_module(rotorboard_app
     URI Rotorboard
@@ -82,12 +85,15 @@ qt_add_qml_module(rotorboard_app
         qml/MotorGrid.qml
         qml/MotorCard.qml
         qml/StatusBadge.qml
+        qml/Sparkline.qml
 )
 
 target_include_directories(rotorboard_app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${MAVLINK_INCLUDE_DIR}
     ${LIBCANARD_DIR}
+)
+target_include_directories(rotorboard_app SYSTEM PRIVATE
+    ${MAVLINK_INCLUDE_DIR}
 )
 
 target_link_libraries(rotorboard_app PRIVATE
@@ -108,6 +114,8 @@ qt_add_executable(rotorboard_model_tests
     src/model/MotorTelemetry.h
     src/model/MotorTelemetry.cpp
     src/model/WarningLevel.h
+    src/store/MotorSampleRingBuffer.h
+    src/store/MotorSampleRingBuffer.cpp
     src/store/MotorTelemetryModel.h
     src/store/MotorTelemetryModel.cpp
     src/warnings/MotorWarningEvaluator.h
@@ -122,6 +130,21 @@ target_link_libraries(rotorboard_model_tests PRIVATE
 )
 
 add_test(NAME rotorboard_model_tests COMMAND rotorboard_model_tests)
+
+qt_add_executable(rotorboard_ringbuffer_tests
+    tests/MotorSampleRingBufferTest.cpp
+    src/store/MotorSampleRingBuffer.h
+    src/store/MotorSampleRingBuffer.cpp
+)
+
+target_include_directories(rotorboard_ringbuffer_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_link_libraries(rotorboard_ringbuffer_tests PRIVATE
+    Qt6::Core
+    Qt6::Test
+)
+
+add_test(NAME rotorboard_ringbuffer_tests COMMAND rotorboard_ringbuffer_tests)
 
 qt_add_executable(rotorboard_logger_tests
     tests/CsvTelemetryLoggerTest.cpp
@@ -158,6 +181,8 @@ qt_add_executable(rotorboard_mavlink_tests
 
 target_include_directories(rotorboard_mavlink_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+target_include_directories(rotorboard_mavlink_tests SYSTEM PRIVATE
     ${MAVLINK_INCLUDE_DIR}
 )
 

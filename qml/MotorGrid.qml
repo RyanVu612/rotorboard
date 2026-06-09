@@ -7,7 +7,7 @@ GridView {
 
     clip: true
     cellWidth: Math.max(minimumCardWidth, Math.floor(width / Math.max(1, Math.floor(width / minimumCardWidth))))
-    cellHeight: 254
+    cellHeight: 310
     boundsBehavior: Flickable.StopAtBounds
 
     delegate: MotorCard {
@@ -24,6 +24,9 @@ GridView {
         status: model.status
         isStale: model.isStale
         warningLevel: model.warningLevel
+        rpmHistory: model.rpmHistory
+        currentHistory: model.currentHistory
+        temperatureHistory: model.temperatureHistory
     }
 
     Text {
