@@ -38,6 +38,59 @@ git clone --depth 1 https://github.com/dronecan/libcanard.git third_party/libcan
 | `--mavlink [host:port]` | Listen for MAVLink `ESC_STATUS` over UDP (default `0.0.0.0:14550`) |
 | `--dronecan [port]` | Read HOBBYWING DroneCAN frames via SLCAN serial (e.g. `COM3` on Windows) |
 
+## Running alongside QGroundControl
+
+Use rotorboard as a dedicated motor dashboard on a second monitor while QGC keeps the map full-screen. QGC owns the flight-controller link; rotorboard receives a forwarded MAVLink copy.
+
+| Consumer | UDP port | Role |
+|----------|----------|------|
+| QGroundControl | `14550` (default link) | Primary GCS (map, mission, params) |
+| Rotorboard | `14551` (forward target) | Motor dashboard only |
+
+### Setup
+
+1. Connect the vehicle to QGC as usual (USB, SiK radio, etc.).
+2. In QGC: **Application Settings → MAVLink → Ground Station**
+   - Enable **MAVLink forwarding**
+   - Set target host to `127.0.0.1` (same PC) or the GCS machine's LAN IP if rotorboard runs on another machine
+   - Set target port to `14551`
+3. Start rotorboard on the secondary port:
+
+   ```powershell
+   .\build\rotorboard_app.exe --mavlink 0.0.0.0:14551
+   ```
+
+   On Linux/macOS:
+
+   ```bash
+   ./build/rotorboard_app --mavlink 0.0.0.0:14551
+   ```
+
+4. Place rotorboard on a second monitor; keep QGC map full-screen on the primary display. Close the MAVLink Inspector tab — rotorboard replaces it.
+
+QGC must stay running and connected for forwarding to work. After a link reconnect, verify motor cards repopulate.
+
+### Pre-flight verification
+
+Before field use, confirm the data path end-to-end:
+
+1. **Confirm `ESC_STATUS` is emitted.** In QGC MAVLink Inspector, search for `ESC_STATUS`. Rotorboard parses only this message (MAVLink msg 291). If the flight controller sends other ESC messages but not `ESC_STATUS`, motor cards will stay empty.
+2. **Confirm rotorboard receives forwarded packets.** The dashboard header shows source badge **MAVLink**; motor cards populate with RPM, voltage, and current. If cards stay empty, confirm forwarding is enabled, target port is `14551`, and `ESC_STATUS` appears in QGC on the live link.
+3. **Confirm stale detection.** If the link drops, cards flip to **STALE** after ~2 s.
+
+Optional session logging:
+
+```powershell
+.\build\rotorboard_app.exe --mavlink 0.0.0.0:14551 --log
+```
+
+Replay later with `--playback logs\session-*.csv`.
+
+### Limitations
+
+- MAVLink mode shows RPM, voltage, and current from `ESC_STATUS`. Temperature, PWM, and fault status are not populated over MAVLink today.
+- Rotorboard is telemetry-only — all vehicle control stays in QGC.
+
 ## Tests
 
 ```powershell
