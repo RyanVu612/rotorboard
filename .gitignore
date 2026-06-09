@@ -12,3 +12,8 @@ third_party/mavlink_c/
 CMakeLists.txt.user*
 *.user
 
+# Local dev/test helpers (not core source)
+build.bat
+build.ps1
+scripts/
+
