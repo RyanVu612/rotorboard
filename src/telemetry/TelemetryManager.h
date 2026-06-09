@@ -1,6 +1,7 @@
 #pragma once
 
 #include "telemetry/TelemetrySource.h"
+#include "logging/CsvTelemetryLogger.h"
 
 #include <QObject>
 #include <QTimer>
@@ -18,6 +19,9 @@ public:
 
     void setSource(std::unique_ptr<TelemetrySource> source);
 
+    bool startLogging(const QString &filePath);
+    void stopLogging();
+
 public slots:
     void start();
     void stop();
@@ -32,5 +36,7 @@ private:
 
     MotorTelemetryModel *m_model = nullptr;
     std::unique_ptr<TelemetrySource> m_source;
+    std::unique_ptr<CsvTelemetryLogger> m_logger;
+    qint64 m_loggingStartedAtMillis = 0;
     QTimer m_staleTimer;
 };

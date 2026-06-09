@@ -11,8 +11,9 @@
 CsvPlaybackSource::CsvPlaybackSource(QString csvPath, QObject *parent)
     : TelemetrySource(parent)
 {
+    m_timer.setInterval(kIntervalMs);
     connect(&m_timer, &QTimer::timeout, this, &CsvPlaybackSource::tick);
-    m_csvPath = csvPath;
+    m_csvPath = std::move(csvPath);
 }
 
 void CsvPlaybackSource::loadCsv()

@@ -124,8 +124,8 @@ CsvPlaybackSource  ──► TelemetrySource     (replay files)
 |------|----------------|
 | `TelemetrySource` | Abstract `QObject`: `start()` / `stop()`, signal `telemetryReceived(const MotorTelemetry &)` |
 | `FakeTelemetrySource` | **Implemented:** 4 motors, ~10 Hz (`QTimer` at 100 ms), randomized realistic ranges |
-| `TelemetryManager` | **Planned:** Owns active source, connects signals to the store, periodic stale check |
-| `CsvPlaybackSource` | **Planned:** Reads logged CSV and emits samples on a timeline |
+| `TelemetryManager` | **Implemented:** Owns active source, connects signals to the store, periodic stale check, optional CSV logging |
+| `CsvPlaybackSource` | **Implemented:** Reads logged CSV and emits samples on a timeline |
 
 Protocol parsing (CAN frames, MAVLink messages, byte layouts) lives **only** inside concrete sources—not in QML or the list model.
 
@@ -135,7 +135,7 @@ Protocol parsing (CAN frames, MAVLink messages, byte layouts) lives **only** ins
 
 | Type | Responsibility |
 |------|----------------|
-| `MotorWarningEvaluator` | **Planned:** `(MotorTelemetry, isStale) → WarningLevel` |
+| `MotorWarningEvaluator` | **Implemented:** `(MotorTelemetry, isStale) → WarningLevel` |
 
 **Initial rules:**
 
@@ -157,7 +157,7 @@ Stale detection itself is **not** in the evaluator alone: the manager/model mark
 
 | Type | Responsibility |
 |------|----------------|
-| `MotorTelemetryModel` | **Planned:** List model with one row per motor; updates on `telemetryReceived`; exposes roles below |
+| `MotorTelemetryModel` | **Implemented:** List model with one row per motor; updates on `telemetryReceived`; exposes roles below |
 
 **Suggested model roles:**
 
@@ -176,18 +176,16 @@ Stale detection itself is **not** in the evaluator alone: the manager/model mark
 
 QML binds to roles (e.g. `display: rpm`, `display: warningLevel`). Do not expose raw hardware handles or mutable protocol objects to QML.
 
-### 5. Logging (`src/logging/` — planned)
+### 5. Logging (`src/logging/`)
 
 | Type | Responsibility |
 |------|----------------|
-| `CsvTelemetryLogger` | Append samples to CSV during live sessions |
-| `CsvPlaybackSource` | `TelemetrySource` that replays a CSV file |
+| `CsvTelemetryLogger` | **Implemented:** Append samples to CSV during live sessions |
+| `CsvPlaybackSource` | **Implemented:** `TelemetrySource` that replays a CSV file (lives in `src/telemetry/`) |
 
 ### 6. Application entry (`src/main.cpp`)
 
-**Today:** `QCoreApplication` + `FakeTelemetrySource` + debug lambda (console smoke test).
-
-**Target:** `QGuiApplication` + `QQmlApplicationEngine`, construct `TelemetryManager` + `MotorTelemetryModel`, register context property or set model on root object, load `qml/Main.qml`.
+**Today:** `QGuiApplication` + `QQmlApplicationEngine`, `AppController` wires `TelemetryManager` + `MotorTelemetryModel`, loads `qml/Main.qml`. CLI flags: `--log [path]` (record session CSV; default `logs/session-YYYYMMDD-HHMMSS.csv`, bare filenames land in `logs/`), `--playback path` (replay CSV instead of fake source).
 
 ### 7. QML UI (`qml/`)
 
@@ -201,7 +199,7 @@ QML binds to roles (e.g. `display: rpm`, `display: warningLevel`). Do not expose
 | `MotorCard.qml` | Per-motor RPM, voltage, current, temperature, status |
 | `StatusBadge.qml` | Warning/stale visual (color, label) |
 
-**Planned:** Cards react to `warningLevel` and `isStale` (border/background). No charts in milestone 1.
+**Implemented:** Cards react to `warningLevel` and `isStale` (border/background). No charts in milestone 1.
 
 ---
 
@@ -222,16 +220,22 @@ rotorboard/
 │   ├── telemetry/
 │   │   ├── TelemetrySource.h / .cpp
 │   │   ├── FakeTelemetrySource.h / .cpp
-│   │   └── TelemetryManager.h / .cpp    (planned)
+│   │   ├── CsvPlaybackSource.h / .cpp
+│   │   └── TelemetryManager.h / .cpp
 │   ├── store/
-│   │   └── MotorTelemetryModel.h / .cpp   (planned)
+│   │   └── MotorTelemetryModel.h / .cpp
 │   ├── warnings/
-│   │   └── MotorWarningEvaluator.h / .cpp (planned)
-│   └── logging/                           (planned)
-│       ├── CsvTelemetryLogger.h / .cpp
-│       └── CsvPlaybackSource.h / .cpp
+│   │   └── MotorWarningEvaluator.h / .cpp
+│   └── logging/
+│       └── CsvTelemetryLogger.h / .cpp
 │
-└── qml/                                   (planned UI)
+├── logs/
+│   └── .gitkeep                           (session CSVs written here; `logs/*.csv` gitignored)
+│
+├── samples/
+│   └── session.csv                        (example playback file)
+│
+└── qml/
     ├── Main.qml
     ├── DashboardPage.qml
     ├── MotorGrid.qml
@@ -247,13 +251,12 @@ rotorboard/
 |-----------|--------|
 | `MotorTelemetry`, `WarningLevel` | Done |
 | `TelemetrySource`, `FakeTelemetrySource` | Done |
-| Console `main` smoke test | Done |
-| `TelemetryManager` | Scaffold only (empty files) |
-| `MotorTelemetryModel` | Scaffold only |
-| `MotorWarningEvaluator` | Scaffold only |
-| QML dashboard | Empty placeholders |
-| CMake QML module (`Qt6::Quick`) | Not wired yet (Core-only build) |
-| CSV logger / playback | Not started |
+| `TelemetryManager` (stale sweep, source lifecycle) | Done |
+| `MotorTelemetryModel` | Done |
+| `MotorWarningEvaluator` | Done |
+| QML dashboard (`Qt6::Quick`, `qt_add_qml_module`) | Done |
+| `CsvTelemetryLogger` | Done |
+| `CsvPlaybackSource` (timer, CLI `--playback`) | Done |
 | MAVLink / DroneCAN | Not started |
 
 ---
@@ -262,12 +265,12 @@ rotorboard/
 
 Build order keeps protocol complexity out of the UI until the pipeline is solid:
 
-1. **Fake telemetry source** — done (console)
-2. **Live dashboard** — model + manager + QML cards
-3. **Stale-data detection** — 2 s threshold in C++, `isStale` role
-4. **Warning evaluation** — `MotorWarningEvaluator` + `warningLevel` role
-5. **CSV logging**
-6. **CSV playback**
+1. **Fake telemetry source** — done
+2. **Live dashboard** — done (model + manager + QML cards)
+3. **Stale-data detection** — done (2 s threshold, `isStale` role)
+4. **Warning evaluation** — done (`MotorWarningEvaluator`, `warningLevel` role)
+5. **CSV logging** — done (`CsvTelemetryLogger`, `--log` / `startLogging`)
+6. **CSV playback** — done (`CsvPlaybackSource`, `--playback`, `samples/session.csv`)
 7. **MAVLink input**
 8. **DroneCAN / HOBBYWING input**
 9. **Advanced widgets** (charts, layouts)
@@ -292,9 +295,14 @@ Build order keeps protocol complexity out of the UI until the pipeline is solid:
 cmake -S . -B build
 cmake --build build
 ./build/rotorboard_app
+./build/rotorboard_app --log
+./build/rotorboard_app --log custom.csv
+./build/rotorboard_app --log /tmp/session.csv
+./build/rotorboard_app --playback samples/session.csv
+ctest --test-dir build
 ```
 
-Expect log lines for simulated motors at ~10 Hz. Once QML is integrated, the same binary will open a window instead of (or in addition to) console output.
+The dashboard opens a Qt Quick window. Use `--log` to record telemetry to CSV during a session (defaults to timestamped files under repo `logs/`), or `--playback` to replay a logged file instead of the fake source.
 
 ---
 

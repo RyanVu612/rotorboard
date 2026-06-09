@@ -1,5 +1,9 @@
 build/
+build2/
 .DS_Store
+
+# Session CSV logs (keep logs/ directory via .gitkeep)
+logs/*.csv
 
 # Qt Creator local IDE settings
 CMakeLists.txt.user*

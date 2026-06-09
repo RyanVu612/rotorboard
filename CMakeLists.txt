@@ -23,6 +23,8 @@ qt_add_executable(rotorboard_app
     src/telemetry/FakeTelemetrySource.cpp
     src/telemetry/TelemetryManager.h
     src/telemetry/TelemetryManager.cpp
+    src/logging/CsvTelemetryLogger.h
+    src/logging/CsvTelemetryLogger.cpp
     src/store/MotorTelemetryModel.h
     src/store/MotorTelemetryModel.cpp
     src/warnings/MotorWarningEvaluator.h
@@ -76,3 +78,24 @@ target_link_libraries(rotorboard_model_tests PRIVATE
 )
 
 add_test(NAME rotorboard_model_tests COMMAND rotorboard_model_tests)
+
+qt_add_executable(rotorboard_logger_tests
+    tests/CsvTelemetryLoggerTest.cpp
+    src/logging/CsvTelemetryLogger.h
+    src/logging/CsvTelemetryLogger.cpp
+    src/model/MotorTelemetry.h
+    src/model/MotorTelemetry.cpp
+    src/telemetry/TelemetrySource.h
+    src/telemetry/TelemetrySource.cpp
+    src/telemetry/CsvPlaybackSource.h
+    src/telemetry/CsvPlaybackSource.cpp
+)
+
+target_include_directories(rotorboard_logger_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_link_libraries(rotorboard_logger_tests PRIVATE
+    Qt6::Core
+    Qt6::Test
+)
+
+add_test(NAME rotorboard_logger_tests COMMAND rotorboard_logger_tests)

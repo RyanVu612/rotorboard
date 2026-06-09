@@ -1,5 +1,6 @@
 #include "TelemetryManager.h"
 
+#include "logging/CsvTelemetryLogger.h"
 #include "store/MotorTelemetryModel.h"
 
 #include <QDateTime>
@@ -29,6 +30,27 @@ void TelemetryManager::setSource(std::unique_ptr<TelemetrySource> source)
             this, &TelemetryManager::handleTelemetryReceived);
 }
 
+bool TelemetryManager::startLogging(const QString &filePath)
+{
+    if (!m_logger) {
+        m_logger = std::make_unique<CsvTelemetryLogger>();
+    }
+
+    if (!m_logger->start(filePath)) {
+        return false;
+    }
+
+    m_loggingStartedAtMillis = QDateTime::currentMSecsSinceEpoch();
+    return true;
+}
+
+void TelemetryManager::stopLogging()
+{
+    if (m_logger) {
+        m_logger->stop();
+    }
+}
+
 void TelemetryManager::start()
 {
     if (m_source) {
@@ -40,6 +62,7 @@ void TelemetryManager::start()
 void TelemetryManager::stop()
 {
     m_staleTimer.stop();
+    stopLogging();
 
     if (m_source) {
         m_source->stop();
@@ -50,6 +73,11 @@ void TelemetryManager::handleTelemetryReceived(const MotorTelemetry &telemetry)
 {
     if (m_model) {
         m_model->updateTelemetry(telemetry);
+    }
+
+    if (m_logger && m_logger->isActive()) {
+        const qint64 elapsedMillis = QDateTime::currentMSecsSinceEpoch() - m_loggingStartedAtMillis;
+        m_logger->logSample(telemetry, elapsedMillis);
     }
 }
 

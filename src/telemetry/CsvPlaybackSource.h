@@ -29,4 +29,5 @@ private:
     qint64 m_startedAtMillis = 0;
     QTimer m_timer;
     QString m_csvPath;
+    static constexpr int kIntervalMs = 100;
 };
