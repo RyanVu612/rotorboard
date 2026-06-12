@@ -55,6 +55,10 @@ public:
 
 signals:
     void sampleRevisionChanged();
+    // Emitted for a single motor whenever its history ring buffers receive a new
+    // sample. Lets chart tiles refresh only their own (motor, metric) series
+    // instead of reacting to the global sampleRevision fan-out.
+    void motorHistoryChanged(int motorId);
 
 private:
     void bumpSampleRevision();

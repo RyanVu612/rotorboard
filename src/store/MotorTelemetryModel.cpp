@@ -227,6 +227,7 @@ void MotorTelemetryModel::updateTelemetry(const MotorTelemetry &telemetry)
         newRow.pwmHistory.push(telemetry.pwm);
         m_rows.push_back(newRow);
         endInsertRows();
+        emit motorHistoryChanged(telemetry.motorId);
         bumpSampleRevision();
         return;
     }
@@ -243,6 +244,7 @@ void MotorTelemetryModel::updateTelemetry(const MotorTelemetry &telemetry)
 
     const QModelIndex changedIndex = index(*existing);
     emit dataChanged(changedIndex, changedIndex, rolesForSampleUpdate());
+    emit motorHistoryChanged(telemetry.motorId);
     bumpSampleRevision();
 }
 

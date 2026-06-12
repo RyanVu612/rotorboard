@@ -5,19 +5,66 @@ import "../MetricUtils.js" as MetricUtils
 Rectangle {
     id: root
 
+    required property var telemetryModel
     required property int motorId
     required property string metric
-    required property var history
     required property bool isStale
     required property int warningLevel
     required property bool chartsFrozen
 
+    // Live history for this (motor, metric). Pulled directly from the model when
+    // this motor's history changes — deliberately NOT bound to the global
+    // sampleRevision/telemetryRevision, so unrelated motor updates do not force
+    // this tile to recopy its ring buffer or repaint.
+    property var history: []
     property var frozenHistory: []
     property int heldWarningLevel: warningLevel
     property bool heldIsStale: isStale
 
+    // Coalesces repaints to at most ~30 fps even if telemetry arrives faster.
+    property bool _historyDirty: false
+
     readonly property int shownWarningLevel: chartsFrozen ? heldWarningLevel : warningLevel
     readonly property bool shownIsStale: chartsFrozen ? heldIsStale : isStale
+
+    function refreshHistory() {
+        if (!telemetryModel || !metric) {
+            history = []
+            return
+        }
+        const h = telemetryModel.historyForMetric(motorId, metric)
+        history = (h === undefined || h === null) ? [] : h
+    }
+
+    onMotorIdChanged: refreshHistory()
+    onMetricChanged: refreshHistory()
+    Component.onCompleted: refreshHistory()
+
+    Connections {
+        target: root.telemetryModel
+        function onMotorHistoryChanged(changedMotorId) {
+            if (changedMotorId !== root.motorId)
+                return
+            // Don't refresh while frozen — the frozen snapshot must hold.
+            if (root.chartsFrozen)
+                return
+            root._historyDirty = true
+            if (!refreshThrottle.running)
+                refreshThrottle.start()
+        }
+    }
+
+    Timer {
+        id: refreshThrottle
+        interval: 33 // ~30 fps cap
+        repeat: false
+        onTriggered: {
+            if (root._historyDirty && !root.chartsFrozen) {
+                root._historyDirty = false
+                root.refreshHistory()
+            }
+        }
+    }
 
     onChartsFrozenChanged: {
         if (chartsFrozen) {
@@ -26,6 +73,8 @@ Rectangle {
             heldIsStale = isStale
         } else {
             frozenHistory = []
+            // Pull whatever accumulated while frozen.
+            refreshHistory()
         }
     }
 

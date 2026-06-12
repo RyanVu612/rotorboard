@@ -5,6 +5,7 @@ import "../MetricUtils.js" as MetricUtils
 Rectangle {
     id: root
 
+    required property var telemetryModel
     required property int motorId
     required property real rpm
     required property real voltage
@@ -14,12 +15,20 @@ Rectangle {
     required property string status
     required property bool isStale
     required property int warningLevel
-    required property var rpmHistory
-    required property var voltageHistory
-    required property var currentHistory
-    required property var temperatureHistory
-    required property var pwmHistory
     required property bool chartsFrozen
+
+    // Live history for each metric, pulled directly from the model when this
+    // motor's history changes — deliberately NOT bound to the global
+    // sampleRevision/telemetryRevision, so unrelated motor updates do not force
+    // this card to recopy five ring buffers or repaint. Same pattern as ChartTile.
+    property var rpmHistory: []
+    property var voltageHistory: []
+    property var currentHistory: []
+    property var temperatureHistory: []
+    property var pwmHistory: []
+
+    // Coalesces refreshes to at most ~30 fps even if telemetry arrives faster.
+    property bool _historyDirty: false
 
     property real heldRpm: rpm
     property real heldVoltage: voltage
@@ -38,9 +47,57 @@ Rectangle {
     readonly property int shownWarningLevel: chartsFrozen ? heldWarningLevel : warningLevel
     readonly property bool shownIsStale: chartsFrozen ? heldIsStale : isStale
 
-    onChartsFrozenChanged: {
-        if (!chartsFrozen)
+    function refreshHistory() {
+        if (!telemetryModel) {
+            rpmHistory = []
+            voltageHistory = []
+            currentHistory = []
+            temperatureHistory = []
+            pwmHistory = []
             return
+        }
+        rpmHistory = telemetryModel.historyForMetric(motorId, "rpm") || []
+        voltageHistory = telemetryModel.historyForMetric(motorId, "voltage") || []
+        currentHistory = telemetryModel.historyForMetric(motorId, "current") || []
+        temperatureHistory = telemetryModel.historyForMetric(motorId, "temperatureCelsius") || []
+        pwmHistory = telemetryModel.historyForMetric(motorId, "pwm") || []
+    }
+
+    onMotorIdChanged: refreshHistory()
+    Component.onCompleted: refreshHistory()
+
+    Connections {
+        target: root.telemetryModel
+        function onMotorHistoryChanged(changedMotorId) {
+            if (changedMotorId !== root.motorId)
+                return
+            // Don't refresh while frozen — the frozen snapshot must hold.
+            if (root.chartsFrozen)
+                return
+            root._historyDirty = true
+            if (!refreshThrottle.running)
+                refreshThrottle.start()
+        }
+    }
+
+    Timer {
+        id: refreshThrottle
+        interval: 33 // ~30 fps cap
+        repeat: false
+        onTriggered: {
+            if (root._historyDirty && !root.chartsFrozen) {
+                root._historyDirty = false
+                root.refreshHistory()
+            }
+        }
+    }
+
+    onChartsFrozenChanged: {
+        if (!chartsFrozen) {
+            // Pull whatever accumulated while frozen.
+            refreshHistory()
+            return
+        }
         heldRpm = rpm
         heldVoltage = voltage
         heldCurrent = current

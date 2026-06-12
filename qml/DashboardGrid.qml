@@ -80,14 +80,6 @@ Flickable {
         return isNaN(n) ? 0 : n
     }
 
-    function metricHistory(motorId, metric) {
-        telemetryRevision
-        if (!telemetryModel || !metric)
-            return []
-        const h = telemetryModel.historyForMetric(motorId, metric)
-        return h === undefined || h === null ? [] : h
-    }
-
     function motorStale(motorId) {
         telemetryRevision
         if (!telemetryModel)
@@ -273,9 +265,9 @@ Flickable {
                 ChartTile {
                     anchors.fill: parent
                     visible: model.widgetType === "chart"
+                    telemetryModel: root.telemetryModel
                     motorId: model.motorId
                     metric: model.metric
-                    history: root.metricHistory(model.motorId, model.metric)
                     isStale: root.motorStale(model.motorId)
                     warningLevel: root.motorWarningLevel(model.motorId)
                     chartsFrozen: root.chartsFrozen
@@ -284,6 +276,7 @@ Flickable {
                 MotorSummaryCard {
                     anchors.fill: parent
                     visible: model.widgetType === "motorSummary"
+                    telemetryModel: root.telemetryModel
                     motorId: model.motorId
                     rpm: root.metricValue(model.motorId, "rpm")
                     voltage: root.metricValue(model.motorId, "voltage")
@@ -293,11 +286,6 @@ Flickable {
                     status: root.motorStatus(model.motorId)
                     isStale: root.motorStale(model.motorId)
                     warningLevel: root.motorWarningLevel(model.motorId)
-                    rpmHistory: root.metricHistory(model.motorId, "rpm")
-                    voltageHistory: root.metricHistory(model.motorId, "voltage")
-                    currentHistory: root.metricHistory(model.motorId, "current")
-                    temperatureHistory: root.metricHistory(model.motorId, "temperatureCelsius")
-                    pwmHistory: root.metricHistory(model.motorId, "pwm")
                     chartsFrozen: root.chartsFrozen
                 }
             }
