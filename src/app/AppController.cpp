@@ -51,20 +51,6 @@ void AppController::toggleChartsFrozen()
     setChartsFrozen(!m_chartsFrozen);
 }
 
-bool AppController::editMode() const
-{
-    return m_editMode;
-}
-
-void AppController::setEditMode(bool enabled)
-{
-    if (m_editMode == enabled) {
-        return;
-    }
-    m_editMode = enabled;
-    emit editModeChanged();
-}
-
 void AppController::start()
 {
     m_telemetryManager.start();

@@ -12,8 +12,6 @@ Item {
     required property int gridColSpan
     required property int gridRowSpan
     required property var grid
-    required property bool editMode
-    required property bool selected
 
     property bool dragging: false
     property real dragX: lockedX
@@ -27,6 +25,7 @@ Item {
     readonly property real lockedY: (gridRow - 1) * grid.cellHeight + grid.cardMargin
     readonly property real lockedWidth: gridColSpan * grid.cellWidth - (grid.cardMargin * 2)
     readonly property real lockedHeight: gridRowSpan * grid.cellHeight - (grid.cardMargin * 2)
+    readonly property bool resizing: grid.resizingWidgetId === slotRoot.widgetId
 
     width: lockedWidth
     height: lockedHeight
@@ -54,58 +53,54 @@ Item {
     onLockedXChanged: { if (!dragging) dragX = lockedX }
     onLockedYChanged: { if (!dragging) dragY = lockedY }
 
-    Rectangle {
-        anchors.fill: parent
-        radius: 8
-        color: "transparent"
-        border.width: slotRoot.selected && slotRoot.editMode ? 2 : 0
-        border.color: "#6eb5d8"
-        visible: slotRoot.editMode
+    HoverHandler {
+        id: hoverHandler
     }
 
-  MouseArea {
-        id: handleArea
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: slotRoot.editMode ? 24 : 0
-        visible: slotRoot.editMode
+    MouseArea {
+        id: bodyArea
+        anchors.fill: parent
         z: 2
-        hoverEnabled: true
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         preventStealing: true
-        cursorShape: Qt.SizeAllCursor
-
-        Rectangle {
-            anchors.centerIn: parent
-            width: parent.width - 12
-            height: 4
-            radius: 2
-            color: "#4a5862"
-        }
 
         onPressed: function(mouse) {
+            if (mouse.button === Qt.RightButton) {
+                mouse.accepted = true
+                return
+            }
             mouse.accepted = true
-            grid.selectWidget(slotRoot.widgetId)
             grid.beginCardDrag()
             dragging = true
             originDragX = lockedX
             originDragY = lockedY
             dragX = lockedX
             dragY = lockedY
-            const pos = handleArea.mapToItem(grid, mouse.x, mouse.y)
+            const pos = bodyArea.mapToItem(grid, mouse.x, mouse.y)
             pressGridX = pos.x
             pressGridY = pos.y
         }
 
         onPositionChanged: function(mouse) {
-            if (!pressed || !mouse)
+            if (!pressed || !dragging || !mouse)
                 return
-            const pos = handleArea.mapToItem(grid, mouse.x, mouse.y)
+            const pos = bodyArea.mapToItem(grid, mouse.x, mouse.y)
             dragX = originDragX + pos.x - pressGridX
             dragY = originDragY + pos.y - pressGridY
         }
 
         onReleased: function(mouse) {
+            if (mouse.button === Qt.RightButton) {
+                if (!dragging && !slotRoot.resizing)
+                    grid.openWidgetMenu(slotRoot.widgetId,
+                                        slotRoot.widgetType,
+                                        slotRoot.motorId,
+                                        slotRoot.metric,
+                                        bodyArea.mapToItem(grid, mouse.x, mouse.y))
+                return
+            }
+            if (!dragging)
+                return
             const col = grid.snapColFromTopLeft(dragX, slotRoot.gridColSpan)
             const row = grid.snapRowFromTopLeft(dragY, slotRoot.gridRowSpan)
             dragging = false
@@ -114,6 +109,8 @@ Item {
         }
 
         onCanceled: {
+            if (!dragging)
+                return
             dragging = false
             dragX = lockedX
             dragY = lockedY
@@ -122,17 +119,24 @@ Item {
     }
 
     MouseArea {
+        id: resizeArea
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        width: slotRoot.editMode ? 16 : 0
-        height: slotRoot.editMode ? 16 : 0
-        visible: slotRoot.editMode
+        width: 16
+        height: 16
         z: 3
         cursorShape: Qt.SizeFDiagCursor
 
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: 4
+            radius: 2
+            color: "#4a5862"
+            visible: hoverHandler.hovered || slotRoot.resizing
+        }
+
         onPressed: function(mouse) {
             mouse.accepted = true
-            grid.selectWidget(slotRoot.widgetId)
             grid.beginResize(slotRoot.widgetId)
         }
 
@@ -147,12 +151,5 @@ Item {
 
         onReleased: grid.endResize()
         onCanceled: grid.endResize()
-    }
-
-    MouseArea {
-        anchors.fill: parent
-        enabled: slotRoot.editMode
-        z: 1
-        onClicked: grid.selectWidget(slotRoot.widgetId)
     }
 }

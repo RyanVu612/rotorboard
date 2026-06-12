@@ -49,6 +49,12 @@ public:
     Q_INVOKABLE int defaultRowSpan(const QString &type) const;
     Q_INVOKABLE void placeWidget(const QString &widgetId, int col, int row);
     Q_INVOKABLE void resizeWidget(const QString &widgetId, int colSpan, int rowSpan);
+    Q_INVOKABLE QString duplicateWidget(const QString &widgetId);
+    Q_INVOKABLE bool editWidget(const QString &widgetId,
+                                const QString &type,
+                                int motorId,
+                                const QString &metric);
+    Q_INVOKABLE bool canPlace(int col, int row, int colSpan, int rowSpan) const;
 
 private:
     struct WidgetRow {
@@ -69,7 +75,7 @@ private:
     int indexForWidgetId(const QString &widgetId) const;
     bool overlaps(const WidgetRow &candidate, const QString &ignoreId = {}) const;
     bool isValidPlacement(int col, int row, int colSpan, int rowSpan) const;
-    QVector<WidgetRow> firstFreePlacement(int colSpan, int rowSpan) const;
+    QVector<WidgetRow> firstFreePlacement(int colSpan, int rowSpan, const QString &ignoreId = {}) const;
     void loadFromSettings();
     void persistToSettings();
     void migrateLegacyPositions();

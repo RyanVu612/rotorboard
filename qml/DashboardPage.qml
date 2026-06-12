@@ -65,16 +65,17 @@ Rectangle {
                 }
 
                 Rectangle {
-                    width: editLabel.implicitWidth + 20
+                    id: addButton
+                    width: addLabel.implicitWidth + 20
                     height: 34
                     radius: 5
-                    color: root.controller.editMode ? "#2a3640" : "#182028"
-                    border.color: root.controller.editMode ? "#3d4d59" : "#2c3843"
+                    color: "#182028"
+                    border.color: "#2c3843"
 
                     Text {
-                        id: editLabel
+                        id: addLabel
                         anchors.centerIn: parent
-                        text: root.controller.editMode ? "Done" : "Edit layout"
+                        text: "+ Add widget"
                         color: "#c9d2d8"
                         font.pixelSize: 13
                         font.weight: Font.Medium
@@ -84,9 +85,9 @@ Rectangle {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            root.controller.editMode = !root.controller.editMode
-                            if (!root.controller.editMode && dashboardGrid)
-                                dashboardGrid.pendingWidgetType = ""
+                            if (dashboardGrid.ghostActive)
+                                dashboardGrid.cancelGhost()
+                            widgetDialog.openForAdd()
                         }
                     }
                 }
@@ -110,27 +111,86 @@ Rectangle {
             }
         }
 
-        Row {
+        DashboardGrid {
+            id: dashboardGrid
             width: parent.width
             height: parent.height - y
-            spacing: 16
+            telemetryModel: root.controller.telemetryModel
+            layoutModel: root.controller.layoutModel
+            chartsFrozen: root.controller.chartsFrozen
 
-            DashboardGrid {
-                id: dashboardGrid
-                width: root.controller.editMode ? parent.width - widgetPalette.width - parent.spacing : parent.width
-                height: parent.height
-                telemetryModel: root.controller.telemetryModel
-                layoutModel: root.controller.layoutModel
-                chartsFrozen: root.controller.chartsFrozen
-                editMode: root.controller.editMode
-            }
-
-            WidgetPalette {
-                id: widgetPalette
-                height: parent.height
-                controller: root.controller
-                dashboardGrid: dashboardGrid
+            onEditRequested: function(widgetId, widgetType, motorId, metric) {
+                widgetDialog.openForEdit(widgetId, widgetType, motorId, metric)
             }
         }
+    }
+
+    WidgetDialog {
+        id: widgetDialog
+        anchors.centerIn: parent
+
+        onConfirmed: function(mode, widgetId, widgetType, motorId, metric) {
+            if (mode === "edit")
+                root.controller.layoutModel.editWidget(widgetId, widgetType, motorId, metric)
+            else
+                dashboardGrid.startGhost(widgetType, motorId, metric)
+        }
+    }
+
+    // While a ghost placement is active this overlay owns the mouse: it tracks
+    // the cursor over the grid, commits on left-click inside the grid, and
+    // cancels on right-click or any click outside the grid.
+    MouseArea {
+        id: ghostOverlay
+        anchors.fill: parent
+        visible: dashboardGrid.ghostActive
+        hoverEnabled: true
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        z: 1000
+
+        function gridPos(mouse) {
+            return ghostOverlay.mapToItem(dashboardGrid, mouse.x, mouse.y)
+        }
+
+        function insideGrid(pos) {
+            return pos.x >= 0 && pos.y >= 0 &&
+                   pos.x < dashboardGrid.width && pos.y < dashboardGrid.height
+        }
+
+        onPositionChanged: function(mouse) {
+            const pos = gridPos(mouse)
+            if (insideGrid(pos))
+                dashboardGrid.updateGhost(pos.x, pos.y)
+            else
+                dashboardGrid.ghostVisible = false
+        }
+
+        onClicked: function(mouse) {
+            if (mouse.button === Qt.RightButton) {
+                dashboardGrid.cancelGhost()
+                return
+            }
+            const pos = gridPos(mouse)
+            if (insideGrid(pos)) {
+                dashboardGrid.updateGhost(pos.x, pos.y)
+                dashboardGrid.commitGhost()
+                return
+            }
+            dashboardGrid.cancelGhost()
+            // Clicking the Add button while a ghost is active cancels the
+            // ghost and reopens the popup for a fresh widget.
+            const buttonPos = ghostOverlay.mapToItem(addButton, mouse.x, mouse.y)
+            if (buttonPos.x >= 0 && buttonPos.y >= 0 &&
+                buttonPos.x < addButton.width && buttonPos.y < addButton.height) {
+                widgetDialog.openForAdd()
+            }
+        }
+    }
+
+    Shortcut {
+        sequence: "Escape"
+        enabled: dashboardGrid.ghostActive
+        context: Qt.ApplicationShortcut
+        onActivated: dashboardGrid.cancelGhost()
     }
 }

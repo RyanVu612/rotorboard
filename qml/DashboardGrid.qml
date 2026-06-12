@@ -9,11 +9,6 @@ Flickable {
     required property var telemetryModel
     required property var layoutModel
     required property bool chartsFrozen
-    required property bool editMode
-    property string pendingWidgetType: ""
-    property int pendingMotorId: 1
-    property string pendingMetric: "rpm"
-    property string selectedWidgetId: ""
 
     readonly property int gridColumns: 16
     readonly property int gridRows: 20
@@ -24,6 +19,19 @@ Flickable {
 
     property int dragLockCount: 0
     property string resizingWidgetId: ""
+
+    // Ghost-placement state (active after confirming the Add widget popup).
+    property bool ghostActive: false
+    property string ghostType: ""
+    property int ghostMotorId: 1
+    property string ghostMetric: ""
+    property int ghostColSpan: 1
+    property int ghostRowSpan: 1
+    property int ghostCol: 1
+    property int ghostRow: 1
+    property bool ghostVisible: false
+
+    signal editRequested(string widgetId, string widgetType, int motorId, string metric)
 
     clip: true
     boundsBehavior: Flickable.StopAtBounds
@@ -107,10 +115,6 @@ Flickable {
     function beginResize(widgetId) { resizingWidgetId = widgetId }
     function endResize() { resizingWidgetId = "" }
 
-    function selectWidget(widgetId) {
-        selectedWidgetId = widgetId
-    }
-
     function placeWidget(widgetId, col, row) {
         layoutModel.placeWidget(widgetId, col, row)
     }
@@ -119,19 +123,56 @@ Flickable {
         layoutModel.resizeWidget(widgetId, colSpan, rowSpan)
     }
 
-    function placePendingWidget(col, row) {
-        if (!pendingWidgetType)
+    function openWidgetMenu(widgetId, widgetType, motorId, metric, gridPos) {
+        if (ghostActive)
             return
+        cardMenu.targetWidgetId = widgetId
+        cardMenu.targetWidgetType = widgetType
+        cardMenu.targetMotorId = motorId
+        cardMenu.targetMetric = metric
+        cardMenu.popup(root, gridPos.x, gridPos.y)
+    }
 
-        const metric = pendingWidgetType === "motorSummary" ? "" : pendingMetric
-        layoutModel.addWidget(pendingWidgetType,
-                              pendingMotorId,
-                              metric,
-                              col,
-                              row,
-                              layoutModel.defaultColSpan(pendingWidgetType),
-                              layoutModel.defaultRowSpan(pendingWidgetType))
-        pendingWidgetType = ""
+    function startGhost(type, motorId, metric) {
+        ghostType = type
+        ghostMotorId = motorId
+        ghostMetric = type === "motorSummary" ? "" : metric
+        ghostColSpan = layoutModel.defaultColSpan(type)
+        ghostRowSpan = layoutModel.defaultRowSpan(type)
+        ghostVisible = false
+        ghostActive = true
+    }
+
+    function cancelGhost() {
+        ghostActive = false
+        ghostVisible = false
+        ghostType = ""
+    }
+
+    // x/y in the Flickable's viewport coordinates.
+    function updateGhost(x, y) {
+        if (!ghostActive)
+            return
+        const contentX = x + root.contentX
+        const contentY = y + root.contentY
+        ghostCol = clamp(Math.floor(contentX / cellWidth) + 1, 1, gridColumns - ghostColSpan + 1)
+        ghostRow = clamp(Math.floor(contentY / cellHeight) + 1, 1, gridRows - ghostRowSpan + 1)
+        ghostVisible = true
+    }
+
+    function commitGhost() {
+        if (!ghostActive || !ghostVisible)
+            return
+        if (!layoutModel.canPlace(ghostCol, ghostRow, ghostColSpan, ghostRowSpan))
+            return
+        layoutModel.addWidget(ghostType,
+                              ghostMotorId,
+                              ghostMetric,
+                              ghostCol,
+                              ghostRow,
+                              ghostColSpan,
+                              ghostRowSpan)
+        cancelGhost()
     }
 
     function ensureMotorWidgets() {
@@ -152,6 +193,33 @@ Flickable {
 
     Component.onCompleted: ensureMotorWidgets()
 
+    Menu {
+        id: cardMenu
+
+        property string targetWidgetId: ""
+        property string targetWidgetType: ""
+        property int targetMotorId: 1
+        property string targetMetric: ""
+
+        MenuItem {
+            text: "Edit…"
+            onTriggered: root.editRequested(cardMenu.targetWidgetId,
+                                            cardMenu.targetWidgetType,
+                                            cardMenu.targetMotorId,
+                                            cardMenu.targetMetric)
+        }
+
+        MenuItem {
+            text: "Duplicate"
+            onTriggered: root.layoutModel.duplicateWidget(cardMenu.targetWidgetId)
+        }
+
+        MenuItem {
+            text: "Delete"
+            onTriggered: root.layoutModel.removeWidget(cardMenu.targetWidgetId)
+        }
+    }
+
     Item {
         width: root.contentWidth
         height: root.contentHeight
@@ -169,14 +237,8 @@ Flickable {
                 width: root.cellWidth
                 height: root.cellHeight
                 color: "transparent"
-                border.color: root.editMode ? "#24303a" : "#1a232b"
+                border.color: "#1a232b"
                 border.width: 1
-
-                MouseArea {
-                    anchors.fill: parent
-                    enabled: root.editMode && root.pendingWidgetType !== ""
-                    onClicked: root.placePendingWidget(cellCol, cellRow)
-                }
             }
         }
 
@@ -187,8 +249,6 @@ Flickable {
                 required property var model
 
                 grid: root
-                editMode: root.editMode
-                selected: root.selectedWidgetId === model.widgetId
                 widgetId: model.widgetId
                 widgetType: model.widgetType
                 motorId: model.motorId
@@ -242,12 +302,39 @@ Flickable {
                 }
             }
         }
+
+        Rectangle {
+            id: ghostPreview
+            visible: root.ghostActive && root.ghostVisible
+            x: (root.ghostCol - 1) * root.cellWidth + root.cardMargin
+            y: (root.ghostRow - 1) * root.cellHeight + root.cardMargin
+            width: root.ghostColSpan * root.cellWidth - (root.cardMargin * 2)
+            height: root.ghostRowSpan * root.cellHeight - (root.cardMargin * 2)
+            z: 300
+            radius: 8
+            opacity: 0.55
+            readonly property bool placementValid:
+                root.layoutModel.canPlace(root.ghostCol, root.ghostRow,
+                                          root.ghostColSpan, root.ghostRowSpan)
+            color: placementValid ? "#2a3640" : "#4d211d"
+            border.color: placementValid ? "#6eb5d8" : "#d05246"
+            border.width: 2
+
+            Text {
+                anchors.centerIn: parent
+                text: root.ghostType === "motorSummary"
+                      ? "Motor " + root.ghostMotorId
+                      : "Motor " + root.ghostMotorId + " · " + root.ghostMetric
+                color: "#e2e8ec"
+                font.pixelSize: 12
+            }
+        }
     }
 
     Text {
         anchors.centerIn: parent
         visible: !layoutModel || layoutModel.rowCount() === 0
-        text: root.editMode ? "Add widgets from the palette" : "Waiting for telemetry"
+        text: "Waiting for telemetry — use Add widget to build your dashboard"
         color: "#7e8b93"
         font.pixelSize: 16
     }

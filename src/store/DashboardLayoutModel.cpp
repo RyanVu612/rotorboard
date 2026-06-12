@@ -308,6 +308,76 @@ void DashboardLayoutModel::resizeWidget(const QString &widgetId, int colSpan, in
     persistToSettings();
 }
 
+QString DashboardLayoutModel::duplicateWidget(const QString &widgetId)
+{
+    const int rowIndex = indexForWidgetId(widgetId);
+    if (rowIndex < 0) {
+        return {};
+    }
+
+    const WidgetRow &source = m_widgets.at(rowIndex);
+    const QVector<WidgetRow> freeSpot = firstFreePlacement(source.colSpan, source.rowSpan);
+    if (freeSpot.isEmpty()) {
+        return {};
+    }
+
+    return addWidget(source.type,
+                     source.motorId,
+                     source.metric,
+                     freeSpot.first().col,
+                     freeSpot.first().row,
+                     source.colSpan,
+                     source.rowSpan);
+}
+
+bool DashboardLayoutModel::editWidget(const QString &widgetId,
+                                      const QString &type,
+                                      int motorId,
+                                      const QString &metric)
+{
+    const int rowIndex = indexForWidgetId(widgetId);
+    if (rowIndex < 0) {
+        return false;
+    }
+
+    WidgetRow candidate = m_widgets.at(rowIndex);
+    const bool typeChanged = candidate.type != type;
+    candidate.type = type;
+    candidate.motorId = motorId;
+    candidate.metric = metric;
+
+    if (typeChanged) {
+        candidate.colSpan = defaultColSpan(type);
+        candidate.rowSpan = defaultRowSpan(type);
+        if (!isValidPlacement(candidate.col, candidate.row, candidate.colSpan, candidate.rowSpan) ||
+            overlaps(candidate, widgetId)) {
+            const QVector<WidgetRow> freeSpot =
+                firstFreePlacement(candidate.colSpan, candidate.rowSpan, widgetId);
+            if (freeSpot.isEmpty()) {
+                return false;
+            }
+            candidate.col = freeSpot.first().col;
+            candidate.row = freeSpot.first().row;
+        }
+    }
+
+    m_widgets[rowIndex] = candidate;
+    const QModelIndex changedIndex = index(rowIndex);
+    emit dataChanged(changedIndex, changedIndex);
+    persistToSettings();
+    return true;
+}
+
+bool DashboardLayoutModel::canPlace(int col, int row, int colSpan, int rowSpan) const
+{
+    WidgetRow candidate;
+    candidate.col = col;
+    candidate.row = row;
+    candidate.colSpan = colSpan;
+    candidate.rowSpan = rowSpan;
+    return isValidPlacement(col, row, colSpan, rowSpan) && !overlaps(candidate);
+}
+
 QString DashboardLayoutModel::makeWidgetId() const
 {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -349,7 +419,8 @@ bool DashboardLayoutModel::isValidPlacement(int col, int row, int colSpan, int r
 }
 
 QVector<DashboardLayoutModel::WidgetRow> DashboardLayoutModel::firstFreePlacement(int colSpan,
-                                                                                  int rowSpan) const
+                                                                                  int rowSpan,
+                                                                                  const QString &ignoreId) const
 {
     for (int row = 1; row <= kGridRows; ++row) {
         for (int col = 1; col <= kGridColumns; ++col) {
@@ -359,7 +430,7 @@ QVector<DashboardLayoutModel::WidgetRow> DashboardLayoutModel::firstFreePlacemen
             candidate.colSpan = colSpan;
             candidate.rowSpan = rowSpan;
             if (isValidPlacement(candidate.col, candidate.row, candidate.colSpan, candidate.rowSpan) &&
-                !overlaps(candidate)) {
+                !overlaps(candidate, ignoreId)) {
                 return {candidate};
             }
         }

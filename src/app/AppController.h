@@ -14,7 +14,6 @@ class AppController : public QObject
     Q_PROPERTY(QObject *layoutModel READ layoutModel CONSTANT)
     Q_PROPERTY(QString sourceLabel READ sourceLabel CONSTANT)
     Q_PROPERTY(bool chartsFrozen READ chartsFrozen WRITE setChartsFrozen NOTIFY chartsFrozenChanged)
-    Q_PROPERTY(bool editMode READ editMode WRITE setEditMode NOTIFY editModeChanged)
 
 public:
     explicit AppController(const SourceConfig &config = SourceConfig(), QObject *parent = nullptr);
@@ -27,9 +26,6 @@ public:
     bool chartsFrozen() const;
     void setChartsFrozen(bool frozen);
 
-    bool editMode() const;
-    void setEditMode(bool enabled);
-
     Q_INVOKABLE void toggleChartsFrozen();
     Q_INVOKABLE void start();
     Q_INVOKABLE void stop();
@@ -38,12 +34,10 @@ public:
 
 signals:
     void chartsFrozenChanged();
-    void editModeChanged();
 
 private:
     QString m_sourceLabel;
     bool m_chartsFrozen = false;
-    bool m_editMode = false;
     MotorTelemetryModel m_telemetryModel;
     DashboardLayoutModel m_layoutModel;
     TelemetryManager m_telemetryManager;

@@ -74,7 +74,7 @@ qt_add_executable(rotorboard_app
 set_source_files_properties(qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
 set_source_files_properties(qml/DashboardPage.qml PROPERTIES QT_RESOURCE_ALIAS DashboardPage.qml)
 set_source_files_properties(qml/DashboardGrid.qml PROPERTIES QT_RESOURCE_ALIAS DashboardGrid.qml)
-set_source_files_properties(qml/WidgetPalette.qml PROPERTIES QT_RESOURCE_ALIAS WidgetPalette.qml)
+set_source_files_properties(qml/WidgetDialog.qml PROPERTIES QT_RESOURCE_ALIAS WidgetDialog.qml)
 set_source_files_properties(qml/MetricUtils.js PROPERTIES QT_RESOURCE_ALIAS MetricUtils.js)
 set_source_files_properties(qml/StatusBadge.qml PROPERTIES QT_RESOURCE_ALIAS StatusBadge.qml)
 set_source_files_properties(qml/Sparkline.qml PROPERTIES QT_RESOURCE_ALIAS Sparkline.qml)
@@ -90,7 +90,7 @@ qt_add_qml_module(rotorboard_app
         qml/Main.qml
         qml/DashboardPage.qml
         qml/DashboardGrid.qml
-        qml/WidgetPalette.qml
+        qml/WidgetDialog.qml
         qml/MetricUtils.js
         qml/StatusBadge.qml
         qml/Sparkline.qml
@@ -143,6 +143,21 @@ target_link_libraries(rotorboard_model_tests PRIVATE
 )
 
 add_test(NAME rotorboard_model_tests COMMAND rotorboard_model_tests)
+
+qt_add_executable(rotorboard_layout_tests
+    tests/DashboardLayoutModelTest.cpp
+    src/store/DashboardLayoutModel.h
+    src/store/DashboardLayoutModel.cpp
+)
+
+target_include_directories(rotorboard_layout_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_link_libraries(rotorboard_layout_tests PRIVATE
+    Qt6::Core
+    Qt6::Test
+)
+
+add_test(NAME rotorboard_layout_tests COMMAND rotorboard_layout_tests)
 
 qt_add_executable(rotorboard_ringbuffer_tests
     tests/MotorSampleRingBufferTest.cpp
