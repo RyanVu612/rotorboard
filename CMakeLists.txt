@@ -77,6 +77,7 @@ set_source_files_properties(qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
 set_source_files_properties(qml/DashboardPage.qml PROPERTIES QT_RESOURCE_ALIAS DashboardPage.qml)
 set_source_files_properties(qml/DashboardGrid.qml PROPERTIES QT_RESOURCE_ALIAS DashboardGrid.qml)
 set_source_files_properties(qml/WidgetDialog.qml PROPERTIES QT_RESOURCE_ALIAS WidgetDialog.qml)
+set_source_files_properties(qml/SettingsDialog.qml PROPERTIES QT_RESOURCE_ALIAS SettingsDialog.qml)
 set_source_files_properties(qml/MetricUtils.js PROPERTIES QT_RESOURCE_ALIAS MetricUtils.js)
 set_source_files_properties(qml/StatusBadge.qml PROPERTIES QT_RESOURCE_ALIAS StatusBadge.qml)
 set_source_files_properties(qml/Sparkline.qml PROPERTIES QT_RESOURCE_ALIAS Sparkline.qml)
@@ -93,6 +94,7 @@ qt_add_qml_module(rotorboard_app
         qml/DashboardPage.qml
         qml/DashboardGrid.qml
         qml/WidgetDialog.qml
+        qml/SettingsDialog.qml
         qml/MetricUtils.js
         qml/StatusBadge.qml
         qml/Sparkline.qml
@@ -160,6 +162,58 @@ target_link_libraries(rotorboard_layout_tests PRIVATE
 )
 
 add_test(NAME rotorboard_layout_tests COMMAND rotorboard_layout_tests)
+
+qt_add_executable(rotorboard_app_controller_tests
+    tests/AppControllerTest.cpp
+    src/app/AppController.h
+    src/app/AppController.cpp
+    src/model/MotorTelemetry.h
+    src/model/MotorTelemetry.cpp
+    src/model/WarningLevel.h
+    src/telemetry/TelemetrySource.h
+    src/telemetry/TelemetrySource.cpp
+    src/telemetry/CsvPlaybackSource.cpp
+    src/telemetry/CsvPlaybackSource.h
+    src/telemetry/FakeTelemetrySource.h
+    src/telemetry/FakeTelemetrySource.cpp
+    src/telemetry/TelemetryManager.h
+    src/telemetry/TelemetryManager.cpp
+    src/logging/CsvTelemetryLogger.h
+    src/logging/CsvTelemetryLogger.cpp
+    src/store/MotorSampleRingBuffer.h
+    src/store/MotorSampleRingBuffer.cpp
+    src/store/MotorTelemetryModel.h
+    src/store/MotorTelemetryModel.cpp
+    src/store/DashboardLayoutModel.h
+    src/store/DashboardLayoutModel.cpp
+    src/warnings/MotorWarningEvaluator.h
+    src/warnings/MotorWarningEvaluator.cpp
+    ${ROTORBOARD_MAVLINK_SOURCES}
+    ${ROTORBOARD_DRONECAN_SOURCES}
+)
+
+target_include_directories(rotorboard_app_controller_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${LIBCANARD_DIR}
+)
+target_include_directories(rotorboard_app_controller_tests SYSTEM PRIVATE
+    ${MAVLINK_INCLUDE_DIR}
+)
+target_compile_definitions(rotorboard_app_controller_tests PRIVATE
+    ROTORBOARD_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+target_link_libraries(rotorboard_app_controller_tests PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Network
+    Qt6::SerialPort
+    Qt6::Test
+)
+
+rotorboard_configure_libcanard(rotorboard_app_controller_tests)
+
+add_test(NAME rotorboard_app_controller_tests COMMAND rotorboard_app_controller_tests)
 
 qt_add_executable(rotorboard_ringbuffer_tests
     tests/MotorSampleRingBufferTest.cpp

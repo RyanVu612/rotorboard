@@ -28,6 +28,15 @@ void TelemetryManager::setSource(std::unique_ptr<TelemetrySource> source)
 
     connect(m_source.get(), &TelemetrySource::telemetryReceived,
             this, &TelemetryManager::handleTelemetryReceived);
+
+    if (m_running) {
+        m_source->start();
+    }
+}
+
+bool TelemetryManager::isRunning() const
+{
+    return m_running;
 }
 
 bool TelemetryManager::startLogging(const QString &filePath)
@@ -53,6 +62,7 @@ void TelemetryManager::stopLogging()
 
 void TelemetryManager::start()
 {
+    m_running = true;
     if (m_source) {
         m_source->start();
     }
@@ -61,6 +71,7 @@ void TelemetryManager::start()
 
 void TelemetryManager::stop()
 {
+    m_running = false;
     m_staleTimer.stop();
     stopLogging();
 

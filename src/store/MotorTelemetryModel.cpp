@@ -273,6 +273,19 @@ void MotorTelemetryModel::refreshStaleState(qint64 nowMillis, qint64 staleThresh
     }
 }
 
+void MotorTelemetryModel::clear()
+{
+    if (m_rows.isEmpty()) {
+        return;
+    }
+
+    beginResetModel();
+    m_rows.clear();
+    m_rowByMotorId.clear();
+    endResetModel();
+    bumpSampleRevision();
+}
+
 QVector<int> MotorTelemetryModel::rolesForSampleUpdate() const
 {
     return {

@@ -18,6 +18,7 @@ public:
     explicit TelemetryManager(MotorTelemetryModel *model, QObject *parent = nullptr);
 
     void setSource(std::unique_ptr<TelemetrySource> source);
+    bool isRunning() const;
 
     bool startLogging(const QString &filePath);
     void stopLogging();
@@ -39,4 +40,5 @@ private:
     std::unique_ptr<CsvTelemetryLogger> m_logger;
     qint64 m_loggingStartedAtMillis = 0;
     QTimer m_staleTimer;
+    bool m_running = false;
 };

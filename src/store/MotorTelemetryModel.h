@@ -44,6 +44,7 @@ public:
 
     void updateTelemetry(const MotorTelemetry &telemetry);
     void refreshStaleState(qint64 nowMillis, qint64 staleThresholdMillis);
+    void clear();
 
     Q_INVOKABLE QVariant valueForMetric(int motorId, const QString &metric) const;
     Q_INVOKABLE QVariantList historyForMetric(int motorId, const QString &metric) const;

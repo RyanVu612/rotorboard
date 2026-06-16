@@ -93,6 +93,29 @@ Rectangle {
                 }
 
                 Rectangle {
+                    width: settingsLabel.implicitWidth + 20
+                    height: 34
+                    radius: 5
+                    color: "#182028"
+                    border.color: "#2c3843"
+
+                    Text {
+                        id: settingsLabel
+                        anchors.centerIn: parent
+                        text: "Settings"
+                        color: "#c9d2d8"
+                        font.pixelSize: 13
+                        font.weight: Font.Medium
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: settingsDialog.openWithCurrentSettings()
+                    }
+                }
+
+                Rectangle {
                     width: Math.min(300, Math.max(120, chipRow.implicitWidth + 24))
                     height: 34
                     radius: 5
@@ -155,6 +178,12 @@ Rectangle {
             else
                 dashboardGrid.startGhost(widgetType, motorId, metric)
         }
+    }
+
+    SettingsDialog {
+        id: settingsDialog
+        anchors.centerIn: parent
+        controller: root.controller
     }
 
     // While a ghost placement is active this overlay owns the mouse: it tracks

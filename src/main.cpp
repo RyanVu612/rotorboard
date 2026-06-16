@@ -4,6 +4,7 @@
 #include "telemetry/TelemetrySourceConfig.h"
 
 #include <QDebug>
+#include <QCoreApplication>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -33,6 +34,8 @@ bool parseMavlinkEndpoint(const QString &value, QString *host, quint16 *port)
 int main (int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+    QCoreApplication::setOrganizationName(QStringLiteral("Rotorboard"));
+    QCoreApplication::setApplicationName(QStringLiteral("Rotorboard"));
     qRegisterMetaType<MotorTelemetry>();
 
     QString logPath;
@@ -117,7 +120,7 @@ int main (int argc, char *argv[])
         sourceConfig.playbackPath.clear();
     }
 
-    AppController controller(sourceConfig);
+    AppController controller(sourceConfig, liveSourceCount > 0);
     if (logRequested) {
         controller.startLogging(logPath);
     }
