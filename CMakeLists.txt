@@ -163,6 +163,51 @@ target_link_libraries(rotorboard_layout_tests PRIVATE
 
 add_test(NAME rotorboard_layout_tests COMMAND rotorboard_layout_tests)
 
+qt_add_executable(rotorboard_dashboard_integration_tests
+    tests/DashboardIntegrationTest.cpp
+    src/store/DashboardLayoutModel.h
+    src/store/DashboardLayoutModel.cpp
+)
+
+qt_add_qml_module(rotorboard_dashboard_integration_tests
+    URI Rotorboard
+    VERSION 1.0
+    OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/dashboard_integration_qml/Rotorboard
+    QML_FILES
+        qml/Main.qml
+        qml/DashboardPage.qml
+        qml/DashboardGrid.qml
+        qml/WidgetDialog.qml
+        qml/SettingsDialog.qml
+        qml/MetricUtils.js
+        qml/StatusBadge.qml
+        qml/Sparkline.qml
+        qml/widgets/ValueTile.qml
+        qml/widgets/ChartTile.qml
+        qml/widgets/MotorSummaryCard.qml
+        qml/widgets/DashboardWidgetSlot.qml
+)
+
+target_include_directories(rotorboard_dashboard_integration_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_compile_definitions(rotorboard_dashboard_integration_tests PRIVATE
+    ROTORBOARD_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+target_link_libraries(rotorboard_dashboard_integration_tests PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Qml
+    Qt6::Quick
+    Qt6::QuickControls2
+    Qt6::Test
+)
+
+add_test(NAME rotorboard_dashboard_integration_tests COMMAND rotorboard_dashboard_integration_tests)
+set_tests_properties(rotorboard_dashboard_integration_tests PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
 qt_add_executable(rotorboard_app_controller_tests
     tests/AppControllerTest.cpp
     src/app/AppController.h

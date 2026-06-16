@@ -5,6 +5,7 @@ import "widgets"
 
 Flickable {
     id: root
+    objectName: "dashboardGrid"
 
     required property var telemetryModel
     required property var layoutModel
@@ -187,6 +188,7 @@ Flickable {
 
     Menu {
         id: cardMenu
+        objectName: "cardMenu"
 
         property string targetWidgetId: ""
         property string targetWidgetType: ""
@@ -194,6 +196,7 @@ Flickable {
         property string targetMetric: ""
 
         MenuItem {
+            objectName: "cardMenuEditAction"
             text: "Edit…"
             onTriggered: root.editRequested(cardMenu.targetWidgetId,
                                             cardMenu.targetWidgetType,
@@ -202,11 +205,13 @@ Flickable {
         }
 
         MenuItem {
+            objectName: "cardMenuDuplicateAction"
             text: "Duplicate"
             onTriggered: root.layoutModel.duplicateWidget(cardMenu.targetWidgetId)
         }
 
         MenuItem {
+            objectName: "cardMenuDeleteAction"
             text: "Delete"
             onTriggered: root.layoutModel.removeWidget(cardMenu.targetWidgetId)
         }
@@ -238,6 +243,7 @@ Flickable {
             model: root.layoutModel
 
             DashboardWidgetSlot {
+                objectName: "widgetSlot-" + model.widgetId
                 required property var model
 
                 grid: root
@@ -293,6 +299,7 @@ Flickable {
 
         Rectangle {
             id: ghostPreview
+            objectName: "ghostPreview"
             visible: root.ghostActive && root.ghostVisible
             x: (root.ghostCol - 1) * root.cellWidth + root.cardMargin
             y: (root.ghostRow - 1) * root.cellHeight + root.cardMargin
@@ -320,6 +327,7 @@ Flickable {
     }
 
     Text {
+        objectName: "emptyDashboardPlaceholder"
         anchors.centerIn: parent
         visible: !layoutModel || layoutModel.rowCount() === 0
         text: "Waiting for telemetry — use Add widget to build your dashboard"

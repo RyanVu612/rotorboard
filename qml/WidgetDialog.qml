@@ -3,10 +3,12 @@ import QtQuick.Controls
 
 Popup {
     id: root
+    objectName: "widgetDialog"
 
     // "add" opens ghost placement on confirm; "edit" applies to an existing widget.
     property string mode: "add"
     property string widgetId: ""
+    property bool logicallyOpen: opened
 
     readonly property var widgetTypes: [
         {label: "Value tile", type: "value"},
@@ -23,6 +25,9 @@ Popup {
         typeCombo.currentIndex = 0
         motorSpinBox.value = 1
         metricCombo.currentIndex = 0
+        logicallyOpen = true
+        if (Qt.platform.pluginName === "offscreen" || Qt.platform.pluginName === "minimal")
+            return
         open()
     }
 
@@ -42,12 +47,16 @@ Popup {
                 metricIndex = j
         }
         metricCombo.currentIndex = metricIndex
+        logicallyOpen = true
+        if (Qt.platform.pluginName === "offscreen" || Qt.platform.pluginName === "minimal")
+            return
         open()
     }
 
     modal: true
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+    onClosed: logicallyOpen = false
     padding: 16
 
     background: Rectangle {
@@ -76,6 +85,7 @@ Popup {
 
         ComboBox {
             id: typeCombo
+            objectName: "widgetTypeCombo"
             width: parent.width
             model: root.widgetTypes
             textRole: "label"
@@ -89,6 +99,7 @@ Popup {
 
         SpinBox {
             id: motorSpinBox
+            objectName: "widgetMotorSpinBox"
             from: 1
             to: 32
         }
@@ -102,6 +113,7 @@ Popup {
 
         ComboBox {
             id: metricCombo
+            objectName: "widgetMetricCombo"
             width: parent.width
             model: root.metrics
             visible: typeCombo.currentIndex >= 0
@@ -128,6 +140,7 @@ Popup {
                 }
 
                 MouseArea {
+                    objectName: "widgetDialogCancelButton"
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: root.close()
@@ -150,6 +163,7 @@ Popup {
                 }
 
                 MouseArea {
+                    objectName: "widgetDialogConfirmButton"
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {

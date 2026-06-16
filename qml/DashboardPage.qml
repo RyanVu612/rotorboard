@@ -3,6 +3,7 @@ import QtCore
 
 Rectangle {
     id: root
+    objectName: "dashboardPage"
 
     required property var controller
 
@@ -42,6 +43,7 @@ Rectangle {
                 spacing: 12
 
                 Rectangle {
+                    objectName: "pauseButton"
                     width: pauseLabel.implicitWidth + 20
                     height: 34
                     radius: 5
@@ -50,6 +52,7 @@ Rectangle {
 
                     Text {
                         id: pauseLabel
+                        objectName: "pauseLabel"
                         anchors.centerIn: parent
                         text: root.controller.chartsFrozen ? "Resume" : "Pause"
                         color: root.controller.chartsFrozen ? "#ffd18a" : "#c9d2d8"
@@ -66,6 +69,7 @@ Rectangle {
 
                 Rectangle {
                     id: addButton
+                    objectName: "addButton"
                     width: addLabel.implicitWidth + 20
                     height: 34
                     radius: 5
@@ -93,6 +97,7 @@ Rectangle {
                 }
 
                 Rectangle {
+                    objectName: "settingsButton"
                     width: settingsLabel.implicitWidth + 20
                     height: 34
                     radius: 5
@@ -156,6 +161,7 @@ Rectangle {
 
         DashboardGrid {
             id: dashboardGrid
+            objectName: "dashboardGrid"
             width: parent.width
             height: parent.height - y
             telemetryModel: root.controller.telemetryModel
@@ -170,6 +176,7 @@ Rectangle {
 
     WidgetDialog {
         id: widgetDialog
+        objectName: "widgetDialog"
         anchors.centerIn: parent
 
         onConfirmed: function(mode, widgetId, widgetType, motorId, metric) {
@@ -182,6 +189,7 @@ Rectangle {
 
     SettingsDialog {
         id: settingsDialog
+        objectName: "settingsDialog"
         anchors.centerIn: parent
         controller: root.controller
     }
@@ -191,6 +199,7 @@ Rectangle {
     // cancels on right-click or any click outside the grid.
     MouseArea {
         id: ghostOverlay
+        objectName: "ghostOverlay"
         anchors.fill: parent
         visible: dashboardGrid.ghostActive
         hoverEnabled: true

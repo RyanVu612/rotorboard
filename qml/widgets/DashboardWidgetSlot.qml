@@ -2,6 +2,7 @@ import QtQuick
 
 Item {
     id: slotRoot
+    objectName: "widgetSlot-" + widgetId
 
     required property string widgetId
     required property string widgetType
@@ -59,6 +60,7 @@ Item {
 
     MouseArea {
         id: bodyArea
+        objectName: "widgetSlotBodyArea"
         anchors.fill: parent
         z: 2
         acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -120,6 +122,7 @@ Item {
 
     MouseArea {
         id: resizeArea
+        objectName: "widgetSlotResizeArea"
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         width: 16
