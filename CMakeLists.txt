@@ -20,6 +20,8 @@ set(ROTORBOARD_MAVLINK_SOURCES
     src/telemetry/MavlinkParser.cpp
     src/telemetry/MavlinkTelemetrySource.h
     src/telemetry/MavlinkTelemetrySource.cpp
+    src/telemetry/MavlinkSerialTelemetrySource.h
+    src/telemetry/MavlinkSerialTelemetrySource.cpp
     src/telemetry/TelemetrySourceConfig.h
     src/telemetry/TelemetrySourceFactory.h
     src/telemetry/TelemetrySourceFactory.cpp
@@ -221,6 +223,36 @@ target_link_libraries(rotorboard_mavlink_tests PRIVATE
 )
 
 add_test(NAME rotorboard_mavlink_tests COMMAND rotorboard_mavlink_tests)
+
+qt_add_executable(rotorboard_mavlink_serial_tests
+    tests/MavlinkSerialTelemetrySourceTest.cpp
+    src/model/MotorTelemetry.h
+    src/model/MotorTelemetry.cpp
+    src/telemetry/TelemetrySource.h
+    src/telemetry/TelemetrySource.cpp
+    src/telemetry/MavlinkParser.h
+    src/telemetry/MavlinkParser.cpp
+    src/telemetry/MavlinkTelemetrySource.h
+    src/telemetry/MavlinkTelemetrySource.cpp
+    src/telemetry/MavlinkSerialTelemetrySource.h
+    src/telemetry/MavlinkSerialTelemetrySource.cpp
+)
+
+target_include_directories(rotorboard_mavlink_serial_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+target_include_directories(rotorboard_mavlink_serial_tests SYSTEM PRIVATE
+    ${MAVLINK_INCLUDE_DIR}
+)
+
+target_link_libraries(rotorboard_mavlink_serial_tests PRIVATE
+    Qt6::Core
+    Qt6::Network
+    Qt6::SerialPort
+    Qt6::Test
+)
+
+add_test(NAME rotorboard_mavlink_serial_tests COMMAND rotorboard_mavlink_serial_tests)
 
 qt_add_executable(rotorboard_dronecan_tests
     tests/DroneCanTelemetrySourceTest.cpp

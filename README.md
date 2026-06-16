@@ -27,6 +27,9 @@ git clone --depth 1 https://github.com/dronecan/libcanard.git third_party/libcan
 .\build\rotorboard_app.exe --playback samples\session.csv
 .\build\rotorboard_app.exe --mavlink
 .\build\rotorboard_app.exe --mavlink 127.0.0.1:14550
+.\build\rotorboard_app.exe --mavlink-serial
+.\build\rotorboard_app.exe --mavlink-serial /dev/tty.usbmodem14201
+.\build\rotorboard_app.exe --mavlink-serial /dev/tty.usbmodem14201 57600
 .\build\rotorboard_app.exe --dronecan COM3
 .\build\rotorboard_app.exe --dronecan COM3 --log
 ```
@@ -36,7 +39,16 @@ git clone --depth 1 https://github.com/dronecan/libcanard.git third_party/libcan
 | `--log [file]` | Record telemetry CSV under `logs/` (default: timestamped filename) |
 | `--playback path` | Replay a logged CSV session |
 | `--mavlink [host:port]` | Listen for MAVLink `ESC_STATUS` over UDP (default `0.0.0.0:14550`) |
+| `--mavlink-serial [port] [baud]` | Read MAVLink directly from a flight controller over USB serial (default baud `115200`). With no port, auto-detects the first USB serial device; the detected ports are logged either way. A lone numeric argument is treated as the baud rate. |
 | `--dronecan [port]` | Read HOBBYWING DroneCAN frames via SLCAN serial (e.g. `COM3` on Windows) |
+
+To connect a Pixhawk directly by USB, plug it in and find its serial device, then pass it to `--mavlink-serial`:
+
+- **macOS:** `ls /dev/tty.usb*` (e.g. `/dev/tty.usbmodem14201`)
+- **Linux:** `ls /dev/ttyACM* /dev/ttyUSB*`
+- **Windows:** check Device Manager for the COM port (e.g. `COM3`)
+
+The source chip in the dashboard header shows a live link indicator: a coloured dot plus status — *port open failed*, *waiting for data* (port open, no bytes), *no valid MAVLink* (bytes arriving that don't parse), or the message rate (`N msg/s`) once valid MAVLink frames are flowing.
 
 ## Running alongside QGroundControl
 

@@ -40,6 +40,7 @@ int main (int argc, char *argv[])
     SourceConfig sourceConfig;
     bool playbackRequested = false;
     bool mavlinkRequested = false;
+    bool mavlinkSerialRequested = false;
     bool dronecanRequested = false;
 
     const QStringList args = app.arguments();
@@ -67,6 +68,30 @@ int main (int argc, char *argv[])
                     qWarning() << "Invalid --mavlink endpoint" << endpoint << "(expected host:port)";
                 }
             }
+        } else if (args.at(i) == QLatin1String("--mavlink-serial")) {
+            sourceConfig.kind = SourceKind::MavlinkSerial;
+            mavlinkSerialRequested = true;
+            // Optional [port] [baud]. A lone numeric token is treated as the baud
+            // rate (auto-detect the port); otherwise it is the port path,
+            // optionally followed by a numeric baud rate.
+            if (i + 1 < args.size() && !args.at(i + 1).startsWith(QLatin1Char('-'))) {
+                const QString token = args.at(++i);
+                bool isNumeric = false;
+                const qint32 numericValue = token.toInt(&isNumeric);
+                if (isNumeric) {
+                    sourceConfig.mavlinkSerialBaud = numericValue;
+                } else {
+                    sourceConfig.mavlinkSerialPort = token;
+                    if (i + 1 < args.size() && !args.at(i + 1).startsWith(QLatin1Char('-'))) {
+                        bool baudOk = false;
+                        const qint32 baud = args.at(i + 1).toInt(&baudOk);
+                        if (baudOk) {
+                            sourceConfig.mavlinkSerialBaud = baud;
+                            ++i;
+                        }
+                    }
+                }
+            }
         } else if (args.at(i) == QLatin1String("--dronecan")) {
             sourceConfig.kind = SourceKind::DroneCan;
             dronecanRequested = true;
@@ -76,7 +101,8 @@ int main (int argc, char *argv[])
         }
     }
 
-    const int liveSourceCount = (playbackRequested ? 1 : 0) + (mavlinkRequested ? 1 : 0) + (dronecanRequested ? 1 : 0);
+    const int liveSourceCount = (playbackRequested ? 1 : 0) + (mavlinkRequested ? 1 : 0) +
+                                (mavlinkSerialRequested ? 1 : 0) + (dronecanRequested ? 1 : 0);
     if (liveSourceCount > 1) {
         if (dronecanRequested) {
             qWarning() << "Multiple telemetry sources requested; using DroneCAN source";
@@ -84,6 +110,9 @@ int main (int argc, char *argv[])
         } else if (mavlinkRequested) {
             qWarning() << "Multiple telemetry sources requested; using MAVLink source";
             sourceConfig.kind = SourceKind::Mavlink;
+        } else if (mavlinkSerialRequested) {
+            qWarning() << "Multiple telemetry sources requested; using MAVLink serial source";
+            sourceConfig.kind = SourceKind::MavlinkSerial;
         }
         sourceConfig.playbackPath.clear();
     }

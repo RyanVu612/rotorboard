@@ -93,19 +93,39 @@ Rectangle {
                 }
 
                 Rectangle {
-                    width: Math.min(164, Math.max(120, sourceLabelText.implicitWidth + 24))
+                    width: Math.min(300, Math.max(120, chipRow.implicitWidth + 24))
                     height: 34
                     radius: 5
                     color: "#182028"
                     border.color: "#2c3843"
 
-                    Text {
-                        id: sourceLabelText
+                    Row {
+                        id: chipRow
                         anchors.centerIn: parent
-                        text: root.controller.sourceLabel
-                        color: "#c9d2d8"
-                        font.pixelSize: 13
-                        font.weight: Font.Medium
+                        spacing: 8
+
+                        Rectangle {
+                            visible: root.controller.linkMonitored
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 9
+                            height: 9
+                            radius: 4.5
+                            color: root.controller.linkStateLevel === 3 ? "#4cd07a"
+                                 : root.controller.linkStateLevel === 2 ? "#d8863a"
+                                 : root.controller.linkStateLevel === 1 ? "#c9a14a"
+                                 : "#e2555a"
+                        }
+
+                        Text {
+                            id: sourceLabelText
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.controller.linkMonitored
+                                  ? root.controller.sourceLabel + " · " + root.controller.linkStatusText
+                                  : root.controller.sourceLabel
+                            color: "#c9d2d8"
+                            font.pixelSize: 13
+                            font.weight: Font.Medium
+                        }
                     }
                 }
             }
