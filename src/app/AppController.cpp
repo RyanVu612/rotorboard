@@ -1,6 +1,6 @@
 #include "AppController.h"
 
-#include "telemetry/MavlinkSerialTelemetrySource.h"
+#include "telemetry/TelemetrySource.h"
 #include "telemetry/TelemetrySourceFactory.h"
 
 #include <QSettings>
@@ -132,16 +132,16 @@ void AppController::handleLinkStatusChanged(int state, double messageRate, const
     }
 
     switch (state) {
-    case MavlinkSerialTelemetrySource::FailedOpen:
+    case TelemetrySource::FailedOpen:
         m_linkStatusText = QStringLiteral("port open failed");
         break;
-    case MavlinkSerialTelemetrySource::NoData:
+    case TelemetrySource::NoData:
         m_linkStatusText = QStringLiteral("waiting for data");
         break;
-    case MavlinkSerialTelemetrySource::NoValidFrames:
+    case TelemetrySource::NoValidFrames:
         m_linkStatusText = QStringLiteral("no valid MAVLink");
         break;
-    case MavlinkSerialTelemetrySource::Receiving:
+    case TelemetrySource::Receiving:
         m_linkStatusText = QStringLiteral("%1 msg/s").arg(qRound(messageRate));
         break;
     default:
@@ -235,10 +235,8 @@ void AppController::applyConfig(const SourceConfig &config, bool persist)
 
     std::unique_ptr<TelemetrySource> source = makeTelemetrySource(m_sourceConfig);
     if (m_linkMonitored) {
-        if (auto *serialSource = dynamic_cast<MavlinkSerialTelemetrySource *>(source.get())) {
-            connect(serialSource, &MavlinkSerialTelemetrySource::linkStatusChanged,
-                    this, &AppController::handleLinkStatusChanged);
-        }
+        connect(source.get(), &TelemetrySource::linkStatusChanged,
+                this, &AppController::handleLinkStatusChanged);
     }
 
     m_telemetryModel.clear();

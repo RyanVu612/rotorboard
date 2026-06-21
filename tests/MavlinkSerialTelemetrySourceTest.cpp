@@ -1,5 +1,5 @@
 #include "model/MotorTelemetry.h"
-#include "telemetry/MavlinkSerialTelemetrySource.h"
+#include "telemetry/MavlinkTelemetrySource.h"
 #include "telemetry/TelemetrySource.h"
 
 #include <QTest>
@@ -38,7 +38,7 @@ QByteArray escStatusPacket(int32_t rpm, float voltage, float current, uint8_t es
 
 void MavlinkSerialTelemetrySourceTest::parsesEscStatusFromSerialBytes()
 {
-    MavlinkSerialTelemetrySource source;
+    MavlinkTelemetrySource source(nullptr);
     QVector<MotorTelemetry> captured;
     QObject::connect(&source, &TelemetrySource::telemetryReceived,
                      [&](const MotorTelemetry &telemetry) { captured.push_back(telemetry); });
@@ -55,7 +55,7 @@ void MavlinkSerialTelemetrySourceTest::parsesEscStatusFromSerialBytes()
 
 void MavlinkSerialTelemetrySourceTest::ignoresNonMavlinkBytes()
 {
-    MavlinkSerialTelemetrySource source;
+    MavlinkTelemetrySource source(nullptr);
     QVector<MotorTelemetry> captured;
     QObject::connect(&source, &TelemetrySource::telemetryReceived,
                      [&](const MotorTelemetry &telemetry) { captured.push_back(telemetry); });

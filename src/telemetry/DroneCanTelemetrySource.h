@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SlcanTransport.h"
+#include "ICanTransport.h"
 #include "TelemetrySource.h"
 #include "dronecan/DroneCanFrameParser.h"
 #include "dronecan/DroneCanMotorCache.h"
@@ -10,7 +10,9 @@ class DroneCanTelemetrySource : public TelemetrySource
     Q_OBJECT
 
 public:
-    explicit DroneCanTelemetrySource(const QString &serialPort = QString(),
+    // transport may be nullptr (use injectCanFrame directly for testing).
+    // When transport has no parent, this source takes ownership via setParent.
+    explicit DroneCanTelemetrySource(ICanTransport *transport = nullptr,
                                      QObject *parent = nullptr);
 
     void start() override;
@@ -21,8 +23,7 @@ public:
 private:
     void onCanFrame(const CanardCANFrame &frame);
 
-    QString m_serialPort;
-    SlcanTransport m_transport;
+    ICanTransport *m_transport;
     DroneCanMotorCache m_cache;
     DroneCanFrameParser m_parser;
 };

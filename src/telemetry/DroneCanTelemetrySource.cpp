@@ -3,29 +3,36 @@
 #include <QDateTime>
 #include <QDebug>
 
-DroneCanTelemetrySource::DroneCanTelemetrySource(const QString &serialPort, QObject *parent)
+DroneCanTelemetrySource::DroneCanTelemetrySource(ICanTransport *transport, QObject *parent)
     : TelemetrySource(parent)
-    , m_serialPort(serialPort)
-    , m_transport(this)
+    , m_transport(transport)
 {
     m_cache.setEmitCallback([this](const MotorTelemetry &telemetry) {
         emit telemetryReceived(telemetry);
     });
     m_parser.setMotorCache(&m_cache);
 
-    connect(&m_transport, &SlcanTransport::canFrameReceived, this, &DroneCanTelemetrySource::onCanFrame);
+    if (m_transport) {
+        if (!m_transport->parent()) {
+            m_transport->setParent(this);
+        }
+        connect(m_transport, &ICanTransport::canFrameReceived,
+                this, &DroneCanTelemetrySource::onCanFrame);
+    }
 }
 
 void DroneCanTelemetrySource::start()
 {
-    if (!m_serialPort.isEmpty() && !m_transport.openPort(m_serialPort)) {
-        qWarning() << "DroneCanTelemetrySource could not open" << m_serialPort;
+    if (m_transport) {
+        m_transport->start();
     }
 }
 
 void DroneCanTelemetrySource::stop()
 {
-    m_transport.closePort();
+    if (m_transport) {
+        m_transport->stop();
+    }
 }
 
 void DroneCanTelemetrySource::injectCanFrame(const CanardCANFrame &frame)

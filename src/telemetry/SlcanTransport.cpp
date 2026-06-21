@@ -34,36 +34,39 @@ bool parseHexByte(const char *text, uint8_t *out)
 
 } // namespace
 
-SlcanTransport::SlcanTransport(QObject *parent)
-    : QObject(parent)
+SlcanTransport::SlcanTransport(const QString &portName, qint32 baudRate, QObject *parent)
+    : ICanTransport(parent)
+    , m_portName(portName)
+    , m_baudRate(baudRate)
 {
     connect(&m_serialPort, &QSerialPort::readyRead, this, &SlcanTransport::onReadyRead);
 }
 
-bool SlcanTransport::openPort(const QString &portName, qint32 baudRate)
+void SlcanTransport::start()
 {
-    closePort();
+    stop();
 
-    m_serialPort.setPortName(portName);
-    m_serialPort.setBaudRate(baudRate);
+    m_serialPort.setPortName(m_portName);
+    m_serialPort.setBaudRate(m_baudRate);
     m_serialPort.setDataBits(QSerialPort::Data8);
     m_serialPort.setParity(QSerialPort::NoParity);
     m_serialPort.setStopBits(QSerialPort::OneStop);
     m_serialPort.setFlowControl(QSerialPort::NoFlowControl);
 
     if (!m_serialPort.open(QIODevice::ReadWrite)) {
-        qWarning() << "SlcanTransport failed to open" << portName << m_serialPort.errorString();
-        return false;
+        qWarning() << "SlcanTransport failed to open" << m_portName << m_serialPort.errorString();
+        emit openFailed();
+        return;
     }
 
     m_serialPort.write("C\r");
     m_serialPort.write("S6\r");
     m_serialPort.write("O\r");
     m_serialPort.flush();
-    return true;
+    emit opened(m_portName);
 }
 
-void SlcanTransport::closePort()
+void SlcanTransport::stop()
 {
     if (m_serialPort.isOpen()) {
         m_serialPort.write("C\r");
@@ -71,11 +74,6 @@ void SlcanTransport::closePort()
         m_serialPort.close();
     }
     m_lineBuffer.clear();
-}
-
-bool SlcanTransport::isOpen() const
-{
-    return m_serialPort.isOpen();
 }
 
 void SlcanTransport::onReadyRead()

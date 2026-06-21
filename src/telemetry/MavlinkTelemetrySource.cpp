@@ -2,55 +2,143 @@
 
 #include <QDateTime>
 #include <QDebug>
-#include <QNetworkDatagram>
 
 namespace {
 constexpr int kEscSlotsPerMessage = 4;
-}
+constexpr int kStatusTickMillis = 1000;
+constexpr qint64 kDataTimeoutMillis = 2000;
+} // namespace
 
-MavlinkTelemetrySource::MavlinkTelemetrySource(const QString &host, quint16 port, QObject *parent)
+MavlinkTelemetrySource::MavlinkTelemetrySource(IByteStreamTransport *transport, QObject *parent)
     : TelemetrySource(parent)
-    , m_host(host)
-    , m_port(port)
+    , m_transport(transport)
 {
-    connect(&m_socket, &QUdpSocket::readyRead, this, &MavlinkTelemetrySource::onReadyRead);
+    if (m_transport) {
+        if (!m_transport->parent()) {
+            m_transport->setParent(this);
+        }
+        connect(m_transport, &IByteStreamTransport::bytesReceived,
+                this, &MavlinkTelemetrySource::onBytesReceived);
+        connect(m_transport, &IByteStreamTransport::opened,
+                this, &MavlinkTelemetrySource::onTransportOpened);
+        connect(m_transport, &IByteStreamTransport::openFailed,
+                this, &MavlinkTelemetrySource::onTransportOpenFailed);
+    }
+
+    m_statusTimer.setInterval(kStatusTickMillis);
+    connect(&m_statusTimer, &QTimer::timeout, this, &MavlinkTelemetrySource::onStatusTick);
 }
 
 void MavlinkTelemetrySource::start()
 {
     m_parser.reset();
+    m_lastByteMillis = 0;
+    m_lastFrameMillis = 0;
+    m_framesSinceTick = 0;
+    m_messageRate = 0.0;
+    m_transportOpen = false;
+    m_endpointName.clear();
 
-    QHostAddress bindAddress;
-    if (m_host.isEmpty() || m_host == QLatin1String("0.0.0.0")) {
-        bindAddress = QHostAddress::AnyIPv4;
-    } else {
-        bindAddress.setAddress(m_host);
-    }
-
-    if (!m_socket.bind(bindAddress, m_port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint)) {
-        qWarning() << "MavlinkTelemetrySource failed to bind" << bindAddress << m_port << m_socket.errorString();
+    if (m_transport) {
+        m_transport->start();
+        m_statusTimer.start();
     }
 }
 
 void MavlinkTelemetrySource::stop()
 {
-    m_socket.close();
+    m_statusTimer.stop();
+    if (m_transport) {
+        m_transport->stop();
+    }
+    m_transportOpen = false;
     m_parser.reset();
 }
 
-void MavlinkTelemetrySource::onReadyRead()
+void MavlinkTelemetrySource::processBytes(const QByteArray &data)
 {
-    while (m_socket.hasPendingDatagrams()) {
-        const QNetworkDatagram datagram = m_socket.receiveDatagram();
-        const QByteArray payload = datagram.data();
+    if (data.isEmpty()) {
+        return;
+    }
 
-        for (const char byte : payload) {
-            const auto message = m_parser.feedByte(static_cast<uint8_t>(byte));
-            if (message.has_value()) {
-                handleMessage(message.value());
-            }
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    m_lastByteMillis = now;
+
+    for (const char byte : data) {
+        const auto message = m_parser.feedByte(static_cast<uint8_t>(byte));
+        if (message.has_value()) {
+            m_lastFrameMillis = now;
+            ++m_framesSinceTick;
+            handleMessage(message.value());
         }
     }
+
+    if (m_transportOpen) {
+        updateState();
+    }
+}
+
+void MavlinkTelemetrySource::onBytesReceived(const QByteArray &data)
+{
+    processBytes(data);
+}
+
+void MavlinkTelemetrySource::onTransportOpened(const QString &endpointName)
+{
+    m_endpointName = endpointName;
+    m_transportOpen = true;
+    m_state = LinkState::NoData;
+    emitStatus();
+}
+
+void MavlinkTelemetrySource::onTransportOpenFailed()
+{
+    m_transportOpen = false;
+    setState(LinkState::FailedOpen);
+}
+
+void MavlinkTelemetrySource::onStatusTick()
+{
+    m_messageRate = m_framesSinceTick;
+    m_framesSinceTick = 0;
+    updateState();
+    if (m_state == LinkState::Receiving) {
+        emitStatus();
+    }
+}
+
+void MavlinkTelemetrySource::updateState()
+{
+    if (!m_transportOpen) {
+        setState(LinkState::FailedOpen);
+        return;
+    }
+
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    const bool framesRecent = m_lastFrameMillis != 0 && (now - m_lastFrameMillis) < kDataTimeoutMillis;
+    const bool bytesRecent = m_lastByteMillis != 0 && (now - m_lastByteMillis) < kDataTimeoutMillis;
+
+    if (framesRecent) {
+        setState(LinkState::Receiving);
+    } else if (bytesRecent) {
+        setState(LinkState::NoValidFrames);
+    } else {
+        setState(LinkState::NoData);
+    }
+}
+
+void MavlinkTelemetrySource::setState(LinkState state)
+{
+    if (m_state == state) {
+        return;
+    }
+    m_state = state;
+    emitStatus();
+}
+
+void MavlinkTelemetrySource::emitStatus()
+{
+    emit linkStatusChanged(static_cast<int>(m_state), m_messageRate, m_endpointName);
 }
 
 void MavlinkTelemetrySource::handleMessage(const mavlink_message_t &message)

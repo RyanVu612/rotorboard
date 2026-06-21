@@ -3,8 +3,10 @@
 #include "CsvPlaybackSource.h"
 #include "DroneCanTelemetrySource.h"
 #include "FakeTelemetrySource.h"
-#include "MavlinkSerialTelemetrySource.h"
 #include "MavlinkTelemetrySource.h"
+#include "SerialByteStreamTransport.h"
+#include "SlcanTransport.h"
+#include "UdpTransport.h"
 
 #include <memory>
 
@@ -14,11 +16,14 @@ std::unique_ptr<TelemetrySource> makeTelemetrySource(const SourceConfig &config)
     case SourceKind::Playback:
         return std::make_unique<CsvPlaybackSource>(config.playbackPath);
     case SourceKind::Mavlink:
-        return std::make_unique<MavlinkTelemetrySource>(config.mavlinkHost, config.mavlinkPort);
+        return std::make_unique<MavlinkTelemetrySource>(
+            new UdpTransport(config.mavlinkHost, config.mavlinkPort));
     case SourceKind::MavlinkSerial:
-        return std::make_unique<MavlinkSerialTelemetrySource>(config.mavlinkSerialPort, config.mavlinkSerialBaud);
+        return std::make_unique<MavlinkTelemetrySource>(
+            new SerialByteStreamTransport(config.mavlinkSerialPort, config.mavlinkSerialBaud));
     case SourceKind::DroneCan:
-        return std::make_unique<DroneCanTelemetrySource>(config.dronecanPort);
+        return std::make_unique<DroneCanTelemetrySource>(
+            new SlcanTransport(config.dronecanPort));
     case SourceKind::Fake:
     default:
         return std::make_unique<FakeTelemetrySource>();

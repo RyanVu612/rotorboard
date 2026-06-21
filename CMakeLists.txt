@@ -18,10 +18,13 @@ qt_standard_project_setup(REQUIRES 6.5)
 set(ROTORBOARD_MAVLINK_SOURCES
     src/telemetry/MavlinkParser.h
     src/telemetry/MavlinkParser.cpp
+    src/telemetry/IByteStreamTransport.h
+    src/telemetry/UdpTransport.h
+    src/telemetry/UdpTransport.cpp
+    src/telemetry/SerialByteStreamTransport.h
+    src/telemetry/SerialByteStreamTransport.cpp
     src/telemetry/MavlinkTelemetrySource.h
     src/telemetry/MavlinkTelemetrySource.cpp
-    src/telemetry/MavlinkSerialTelemetrySource.h
-    src/telemetry/MavlinkSerialTelemetrySource.cpp
     src/telemetry/TelemetrySourceConfig.h
     src/telemetry/TelemetrySourceFactory.h
     src/telemetry/TelemetrySourceFactory.cpp
@@ -33,6 +36,7 @@ set_source_files_properties(${LIBCANARD_C_SOURCE} PROPERTIES LANGUAGE C)
 set(ROTORBOARD_DRONECAN_SOURCES
     src/telemetry/DroneCanTelemetrySource.h
     src/telemetry/DroneCanTelemetrySource.cpp
+    src/telemetry/ICanTransport.h
     src/telemetry/SlcanTransport.h
     src/telemetry/SlcanTransport.cpp
     src/telemetry/dronecan/DroneCanFrameParser.h
@@ -304,6 +308,7 @@ qt_add_executable(rotorboard_mavlink_tests
     src/telemetry/TelemetrySource.cpp
     src/telemetry/MavlinkParser.h
     src/telemetry/MavlinkParser.cpp
+    src/telemetry/IByteStreamTransport.h
     src/telemetry/MavlinkTelemetrySource.h
     src/telemetry/MavlinkTelemetrySource.cpp
 )
@@ -331,10 +336,9 @@ qt_add_executable(rotorboard_mavlink_serial_tests
     src/telemetry/TelemetrySource.cpp
     src/telemetry/MavlinkParser.h
     src/telemetry/MavlinkParser.cpp
+    src/telemetry/IByteStreamTransport.h
     src/telemetry/MavlinkTelemetrySource.h
     src/telemetry/MavlinkTelemetrySource.cpp
-    src/telemetry/MavlinkSerialTelemetrySource.h
-    src/telemetry/MavlinkSerialTelemetrySource.cpp
 )
 
 target_include_directories(rotorboard_mavlink_serial_tests PRIVATE
