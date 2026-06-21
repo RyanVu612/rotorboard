@@ -17,12 +17,16 @@ Popup {
     property string draftPlaybackPath: ""
     property string draftMavlinkSerialPort: ""
     property int draftMavlinkSerialBaud: 115200
+    property string draftMavlinkTcpHost: "127.0.0.1"
+    property int draftMavlinkTcpPort: 5760
 
     function openWithCurrentSettings() {
         draftInputMethod = controller.inputMethod
         draftPlaybackPath = controller.playbackPath
         draftMavlinkSerialPort = controller.mavlinkSerialPort
         draftMavlinkSerialBaud = controller.mavlinkSerialBaud
+        draftMavlinkTcpHost = controller.mavlinkTcpHost
+        draftMavlinkTcpPort = controller.mavlinkTcpPort
         open()
     }
 
@@ -62,6 +66,7 @@ Popup {
                 Repeater {
                     model: [
                         { label: "Pixhawk", value: "pixhawk" },
+                        { label: "MAVLink TCP", value: "mavlink_tcp" },
                         { label: "CSV Replay", value: "playback" },
                         { label: "Fake Data", value: "fake" }
                     ]
@@ -69,7 +74,7 @@ Popup {
                     Rectangle {
                         required property var modelData
 
-                        width: (parent.width - 16) / 3
+                        width: (parent.width - 24) / 4
                         height: 34
                         radius: 5
                         color: root.draftInputMethod === modelData.value ? "#23415a" : "#182028"
@@ -138,6 +143,48 @@ Popup {
         Column {
             width: parent.width
             spacing: 8
+            visible: root.draftInputMethod === "mavlink_tcp"
+
+            Text {
+                text: "MAVLink TCP"
+                color: "#92a0a8"
+                font.pixelSize: 12
+                font.weight: Font.Medium
+            }
+
+            TextField {
+                width: parent.width
+                height: 36
+                text: root.draftMavlinkTcpHost
+                placeholderText: "Host (e.g. 127.0.0.1)"
+                color: "#f4f7f8"
+                placeholderTextColor: "#687680"
+                selectionColor: "#4f9bd0"
+                selectedTextColor: "#101418"
+                onTextChanged: root.draftMavlinkTcpHost = text
+            }
+
+            TextField {
+                width: parent.width
+                height: 36
+                text: String(root.draftMavlinkTcpPort)
+                placeholderText: "Port (e.g. 5760)"
+                inputMethodHints: Qt.ImhDigitsOnly
+                color: "#f4f7f8"
+                placeholderTextColor: "#687680"
+                selectionColor: "#4f9bd0"
+                selectedTextColor: "#101418"
+                onTextChanged: {
+                    const parsed = parseInt(text)
+                    if (!isNaN(parsed))
+                        root.draftMavlinkTcpPort = parsed
+                }
+            }
+        }
+
+        Column {
+            width: parent.width
+            spacing: 8
             visible: root.draftInputMethod === "playback"
 
             Text {
@@ -189,6 +236,8 @@ Popup {
                         root.controller.playbackPath = root.draftPlaybackPath
                         root.controller.mavlinkSerialPort = root.draftMavlinkSerialPort
                         root.controller.mavlinkSerialBaud = root.draftMavlinkSerialBaud
+                        root.controller.mavlinkTcpHost = root.draftMavlinkTcpHost
+                        root.controller.mavlinkTcpPort = root.draftMavlinkTcpPort
                         root.controller.applyTelemetrySource()
                         root.close()
                     }

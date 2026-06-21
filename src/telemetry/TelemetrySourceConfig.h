@@ -9,6 +9,7 @@ enum class SourceKind {
     Playback,
     Mavlink,
     MavlinkSerial,
+    MavlinkTcp,
     DroneCan
 };
 
@@ -19,6 +20,8 @@ struct SourceConfig {
     quint16 mavlinkPort = 14550;
     QString mavlinkSerialPort;
     qint32 mavlinkSerialBaud = 115200;
+    QString mavlinkTcpHost = QStringLiteral("127.0.0.1");
+    quint16 mavlinkTcpPort = 5760;
     QString dronecanPort;
 };
 

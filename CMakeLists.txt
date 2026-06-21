@@ -23,6 +23,8 @@ set(ROTORBOARD_MAVLINK_SOURCES
     src/telemetry/UdpTransport.cpp
     src/telemetry/SerialByteStreamTransport.h
     src/telemetry/SerialByteStreamTransport.cpp
+    src/telemetry/TcpTransport.h
+    src/telemetry/TcpTransport.cpp
     src/telemetry/MavlinkTelemetrySource.h
     src/telemetry/MavlinkTelemetrySource.cpp
     src/telemetry/TelemetrySourceConfig.h
@@ -380,3 +382,20 @@ target_link_libraries(rotorboard_dronecan_tests PRIVATE
 rotorboard_configure_libcanard(rotorboard_dronecan_tests)
 
 add_test(NAME rotorboard_dronecan_tests COMMAND rotorboard_dronecan_tests)
+
+qt_add_executable(rotorboard_tcp_transport_tests
+    tests/TcpTransportTest.cpp
+    src/telemetry/IByteStreamTransport.h
+    src/telemetry/TcpTransport.h
+    src/telemetry/TcpTransport.cpp
+)
+
+target_include_directories(rotorboard_tcp_transport_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_link_libraries(rotorboard_tcp_transport_tests PRIVATE
+    Qt6::Core
+    Qt6::Network
+    Qt6::Test
+)
+
+add_test(NAME rotorboard_tcp_transport_tests COMMAND rotorboard_tcp_transport_tests)

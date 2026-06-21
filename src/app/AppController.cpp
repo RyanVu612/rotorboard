@@ -10,6 +10,7 @@ namespace {
 constexpr auto kInputMethodFake = "fake";
 constexpr auto kInputMethodPlayback = "playback";
 constexpr auto kInputMethodPixhawk = "pixhawk";
+constexpr auto kInputMethodMavlinkTcp = "mavlink_tcp";
 
 } // namespace
 
@@ -17,7 +18,7 @@ AppController::AppController(const SourceConfig &config, bool sourceConfigExplic
     : QObject(parent)
     , m_sourceConfig(config)
     , m_sourceLabel(sourceLabelFor(config))
-    , m_linkMonitored(config.kind == SourceKind::MavlinkSerial)
+    , m_linkMonitored(config.kind == SourceKind::MavlinkSerial || config.kind == SourceKind::MavlinkTcp)
     , m_telemetryModel(this)
     , m_layoutModel(this)
     , m_telemetryManager(&m_telemetryModel, this)
@@ -120,12 +121,43 @@ void AppController::setMavlinkSerialBaud(int baud)
     emit inputSettingsChanged();
 }
 
+QString AppController::mavlinkTcpHost() const
+{
+    return m_sourceConfig.mavlinkTcpHost;
+}
+
+void AppController::setMavlinkTcpHost(const QString &host)
+{
+    if (m_sourceConfig.mavlinkTcpHost == host) {
+        return;
+    }
+    m_sourceConfig.mavlinkTcpHost = host;
+    emit inputSettingsChanged();
+}
+
+int AppController::mavlinkTcpPort() const
+{
+    return m_sourceConfig.mavlinkTcpPort;
+}
+
+void AppController::setMavlinkTcpPort(int port)
+{
+    const quint16 clamped = static_cast<quint16>(qBound(1, port, 65535));
+    if (m_sourceConfig.mavlinkTcpPort == clamped) {
+        return;
+    }
+    m_sourceConfig.mavlinkTcpPort = clamped;
+    emit inputSettingsChanged();
+}
+
 void AppController::handleLinkStatusChanged(int state, double messageRate, const QString &portName)
 {
     m_linkStateLevel = state;
 
     const QString resolvedPort = portName.isEmpty() ? QStringLiteral("(no device)") : portName;
-    const QString label = QStringLiteral("MAVLink serial %1").arg(resolvedPort);
+    const QString label = (m_sourceConfig.kind == SourceKind::MavlinkTcp)
+        ? QStringLiteral("MAVLink TCP %1").arg(resolvedPort)
+        : QStringLiteral("MAVLink serial %1").arg(resolvedPort);
     if (label != m_sourceLabel) {
         m_sourceLabel = label;
         emit sourceLabelChanged();
@@ -208,6 +240,10 @@ void AppController::loadSettings()
         settings.value(QStringLiteral("mavlinkSerialPort"), m_sourceConfig.mavlinkSerialPort).toString();
     m_sourceConfig.mavlinkSerialBaud =
         settings.value(QStringLiteral("mavlinkSerialBaud"), m_sourceConfig.mavlinkSerialBaud).toInt();
+    m_sourceConfig.mavlinkTcpHost =
+        settings.value(QStringLiteral("mavlinkTcpHost"), m_sourceConfig.mavlinkTcpHost).toString();
+    m_sourceConfig.mavlinkTcpPort =
+        static_cast<quint16>(settings.value(QStringLiteral("mavlinkTcpPort"), m_sourceConfig.mavlinkTcpPort).toInt());
 
     settings.endGroup();
 }
@@ -221,6 +257,8 @@ void AppController::saveSettings() const
     settings.setValue(QStringLiteral("playbackPath"), m_sourceConfig.playbackPath);
     settings.setValue(QStringLiteral("mavlinkSerialPort"), m_sourceConfig.mavlinkSerialPort);
     settings.setValue(QStringLiteral("mavlinkSerialBaud"), m_sourceConfig.mavlinkSerialBaud);
+    settings.setValue(QStringLiteral("mavlinkTcpHost"), m_sourceConfig.mavlinkTcpHost);
+    settings.setValue(QStringLiteral("mavlinkTcpPort"), static_cast<int>(m_sourceConfig.mavlinkTcpPort));
 
     settings.endGroup();
 }
@@ -229,7 +267,8 @@ void AppController::applyConfig(const SourceConfig &config, bool persist)
 {
     m_sourceConfig = config;
     m_sourceLabel = sourceLabelFor(m_sourceConfig);
-    m_linkMonitored = m_sourceConfig.kind == SourceKind::MavlinkSerial;
+    m_linkMonitored = m_sourceConfig.kind == SourceKind::MavlinkSerial
+                   || m_sourceConfig.kind == SourceKind::MavlinkTcp;
     m_linkStateLevel = m_linkMonitored ? 1 : 3;
     m_linkStatusText = m_linkMonitored ? QStringLiteral("waiting for data") : QString();
 
@@ -266,6 +305,8 @@ QString AppController::inputMethodForKind(SourceKind kind) const
     case SourceKind::Mavlink:
     case SourceKind::MavlinkSerial:
         return QString::fromLatin1(kInputMethodPixhawk);
+    case SourceKind::MavlinkTcp:
+        return QString::fromLatin1(kInputMethodMavlinkTcp);
     case SourceKind::Fake:
     default:
         return QString::fromLatin1(kInputMethodFake);
@@ -279,6 +320,9 @@ SourceKind AppController::kindForInputMethod(const QString &method) const
     }
     if (method == QLatin1String(kInputMethodPixhawk)) {
         return SourceKind::MavlinkSerial;
+    }
+    if (method == QLatin1String(kInputMethodMavlinkTcp)) {
+        return SourceKind::MavlinkTcp;
     }
     return SourceKind::Fake;
 }

@@ -6,6 +6,7 @@
 #include "MavlinkTelemetrySource.h"
 #include "SerialByteStreamTransport.h"
 #include "SlcanTransport.h"
+#include "TcpTransport.h"
 #include "UdpTransport.h"
 
 #include <memory>
@@ -21,6 +22,9 @@ std::unique_ptr<TelemetrySource> makeTelemetrySource(const SourceConfig &config)
     case SourceKind::MavlinkSerial:
         return std::make_unique<MavlinkTelemetrySource>(
             new SerialByteStreamTransport(config.mavlinkSerialPort, config.mavlinkSerialBaud));
+    case SourceKind::MavlinkTcp:
+        return std::make_unique<MavlinkTelemetrySource>(
+            new TcpTransport(config.mavlinkTcpHost, config.mavlinkTcpPort));
     case SourceKind::DroneCan:
         return std::make_unique<DroneCanTelemetrySource>(
             new SlcanTransport(config.dronecanPort));
@@ -42,6 +46,8 @@ QString sourceLabelFor(const SourceConfig &config)
             return QStringLiteral("MAVLink serial (auto)");
         }
         return QStringLiteral("MAVLink serial %1").arg(config.mavlinkSerialPort);
+    case SourceKind::MavlinkTcp:
+        return QStringLiteral("MAVLink TCP %1:%2").arg(config.mavlinkTcpHost).arg(config.mavlinkTcpPort);
     case SourceKind::DroneCan:
         if (config.dronecanPort.isEmpty()) {
             return QStringLiteral("DroneCAN (no port)");

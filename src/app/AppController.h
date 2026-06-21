@@ -21,6 +21,8 @@ class AppController : public QObject
     Q_PROPERTY(QString playbackPath READ playbackPath WRITE setPlaybackPath NOTIFY inputSettingsChanged)
     Q_PROPERTY(QString mavlinkSerialPort READ mavlinkSerialPort WRITE setMavlinkSerialPort NOTIFY inputSettingsChanged)
     Q_PROPERTY(int mavlinkSerialBaud READ mavlinkSerialBaud WRITE setMavlinkSerialBaud NOTIFY inputSettingsChanged)
+    Q_PROPERTY(QString mavlinkTcpHost READ mavlinkTcpHost WRITE setMavlinkTcpHost NOTIFY inputSettingsChanged)
+    Q_PROPERTY(int mavlinkTcpPort READ mavlinkTcpPort WRITE setMavlinkTcpPort NOTIFY inputSettingsChanged)
 
 public:
     explicit AppController(const SourceConfig &config = SourceConfig(),
@@ -45,6 +47,10 @@ public:
     void setMavlinkSerialPort(const QString &port);
     int mavlinkSerialBaud() const;
     void setMavlinkSerialBaud(int baud);
+    QString mavlinkTcpHost() const;
+    void setMavlinkTcpHost(const QString &host);
+    int mavlinkTcpPort() const;
+    void setMavlinkTcpPort(int port);
 
     Q_INVOKABLE void toggleChartsFrozen();
     Q_INVOKABLE void applyTelemetrySource();
