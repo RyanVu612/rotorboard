@@ -21,4 +21,5 @@ private:
     QTimer m_timer;
     static constexpr int kMotorCount = 4;
     static constexpr int kIntervalMs = 100;
+    double m_batteryRemaining = 100.0;
 };

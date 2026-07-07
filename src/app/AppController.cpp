@@ -20,8 +20,9 @@ AppController::AppController(const SourceConfig &config, bool sourceConfigExplic
     , m_sourceLabel(sourceLabelFor(config))
     , m_linkMonitored(config.kind == SourceKind::MavlinkSerial || config.kind == SourceKind::MavlinkTcp)
     , m_telemetryModel(this)
+    , m_batteryTelemetryModel(this)
     , m_layoutModel(this)
-    , m_telemetryManager(&m_telemetryModel, this)
+    , m_telemetryManager(&m_telemetryModel, &m_batteryTelemetryModel, this)
 {
     if (!sourceConfigExplicit) {
         loadSettings();
@@ -37,6 +38,11 @@ AppController::~AppController()
 QObject *AppController::telemetryModel()
 {
     return &m_telemetryModel;
+}
+
+QObject *AppController::batteryTelemetryModel()
+{
+    return &m_batteryTelemetryModel;
 }
 
 QObject *AppController::layoutModel()
@@ -279,6 +285,7 @@ void AppController::applyConfig(const SourceConfig &config, bool persist)
     }
 
     m_telemetryModel.clear();
+    m_batteryTelemetryModel.clear();
     m_telemetryManager.setSource(std::move(source));
 
     if (persist) {

@@ -9,13 +9,14 @@
 #include <memory>
 
 class MotorTelemetryModel;
+class BatteryTelemetryModel;
 
 class TelemetryManager : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit TelemetryManager(MotorTelemetryModel *model, QObject *parent = nullptr);
+    explicit TelemetryManager(MotorTelemetryModel *model, BatteryTelemetryModel *batteryModel = nullptr, QObject *parent = nullptr);
 
     void setSource(std::unique_ptr<TelemetrySource> source);
     bool isRunning() const;
@@ -29,6 +30,7 @@ public slots:
 
 private slots:
     void handleTelemetryReceived(const MotorTelemetry &telemetry);
+    void handleBatteryTelemetryReceived(const BatteryTelemetry &telemetry);
     void refreshStaleState();
 
 private:
@@ -36,6 +38,7 @@ private:
     static constexpr int kStaleRefreshIntervalMillis = 250;
 
     MotorTelemetryModel *m_model = nullptr;
+    BatteryTelemetryModel *m_batteryModel = nullptr;
     std::unique_ptr<TelemetrySource> m_source;
     std::unique_ptr<CsvTelemetryLogger> m_logger;
     qint64 m_loggingStartedAtMillis = 0;

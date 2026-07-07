@@ -13,7 +13,8 @@ Popup {
     readonly property var widgetTypes: [
         {label: "Value tile", type: "value"},
         {label: "Chart", type: "chart"},
-        {label: "Motor summary", type: "motorSummary"}
+        {label: "Motor summary", type: "motorSummary"},
+        {label: "Battery summary", type: "batterySummary"}
     ]
     readonly property var metrics: ["rpm", "voltage", "current", "temperatureCelsius", "pwm"]
 
@@ -92,7 +93,9 @@ Popup {
         }
 
         Text {
-            text: "Motor"
+            text: typeCombo.currentIndex >= 0 && root.widgetTypes[typeCombo.currentIndex].type === "batterySummary"
+                  ? "Battery"
+                  : "Motor"
             color: "#92a0a8"
             font.pixelSize: 11
         }
@@ -100,7 +103,7 @@ Popup {
         SpinBox {
             id: motorSpinBox
             objectName: "widgetMotorSpinBox"
-            from: 1
+            from: typeCombo.currentIndex >= 0 && root.widgetTypes[typeCombo.currentIndex].type === "batterySummary" ? 0 : 1
             to: 32
         }
 
@@ -118,6 +121,7 @@ Popup {
             model: root.metrics
             visible: typeCombo.currentIndex >= 0
                      && root.widgetTypes[typeCombo.currentIndex].type !== "motorSummary"
+                     && root.widgetTypes[typeCombo.currentIndex].type !== "batterySummary"
         }
 
         Row {
@@ -168,7 +172,7 @@ Popup {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         const widgetType = root.widgetTypes[typeCombo.currentIndex].type
-                        const metric = widgetType === "motorSummary" ? "" : metricCombo.currentText
+                        const metric = widgetType === "motorSummary" || widgetType === "batterySummary" ? "" : metricCombo.currentText
                         root.confirmed(root.mode, root.widgetId, widgetType,
                                        motorSpinBox.value, metric)
                         root.close()

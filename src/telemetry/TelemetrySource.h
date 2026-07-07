@@ -1,5 +1,6 @@
 #pragma once
 
+#include "model/BatteryTelemetry.h"
 #include "model/MotorTelemetry.h"
 
 #include <QObject>
@@ -26,5 +27,6 @@ public:
 
 signals:
     void telemetryReceived(const MotorTelemetry &telemetry);
+    void batteryTelemetryReceived(const BatteryTelemetry &telemetry);
     void linkStatusChanged(int state, double messageRate, const QString &endpointName);
 };

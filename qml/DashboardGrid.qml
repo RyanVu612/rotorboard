@@ -8,6 +8,7 @@ Flickable {
     objectName: "dashboardGrid"
 
     required property var telemetryModel
+    required property var batteryTelemetryModel
     required property var layoutModel
     required property bool chartsFrozen
 
@@ -17,6 +18,7 @@ Flickable {
     readonly property int cellHeight: 72
     readonly property int cardMargin: 4
     readonly property int telemetryRevision: telemetryModel ? telemetryModel.sampleRevision : 0
+    readonly property int batteryTelemetryRevision: batteryTelemetryModel ? batteryTelemetryModel.sampleRevision : 0
 
     property int dragLockCount: 0
     property string resizingWidgetId: ""
@@ -103,6 +105,38 @@ Flickable {
         return s === undefined || s === null ? "" : s
     }
 
+    function batteryValue(batteryId, metric) {
+        batteryTelemetryRevision
+        if (!batteryTelemetryModel || !metric)
+            return 0
+        const v = batteryTelemetryModel.valueForMetric(batteryId, metric)
+        if (v === undefined || v === null)
+            return 0
+        const n = Number(v)
+        return n
+    }
+
+    function batteryCellVoltages(batteryId) {
+        batteryTelemetryRevision
+        if (!batteryTelemetryModel)
+            return []
+        return batteryTelemetryModel.cellVoltagesForBattery(batteryId) || []
+    }
+
+    function batteryStale(batteryId) {
+        batteryTelemetryRevision
+        if (!batteryTelemetryModel)
+            return true
+        return batteryTelemetryModel.isBatteryStale(batteryId)
+    }
+
+    function batteryWarningLevel(batteryId) {
+        batteryTelemetryRevision
+        if (!batteryTelemetryModel)
+            return 0
+        return batteryTelemetryModel.warningLevelForBattery(batteryId)
+    }
+
     function beginCardDrag() { dragLockCount++ }
     function endCardDrag() { dragLockCount = Math.max(0, dragLockCount - 1) }
     function beginResize(widgetId) { resizingWidgetId = widgetId }
@@ -129,7 +163,7 @@ Flickable {
     function startGhost(type, motorId, metric) {
         ghostType = type
         ghostMotorId = motorId
-        ghostMetric = type === "motorSummary" ? "" : metric
+        ghostMetric = type === "motorSummary" || type === "batterySummary" ? "" : metric
         ghostColSpan = layoutModel.defaultColSpan(type)
         ghostRowSpan = layoutModel.defaultRowSpan(type)
         ghostVisible = false
@@ -294,6 +328,22 @@ Flickable {
                     warningLevel: root.motorWarningLevel(model.motorId)
                     chartsFrozen: root.chartsFrozen
                 }
+
+                BatterySummaryCard {
+                    anchors.fill: parent
+                    visible: model.widgetType === "batterySummary"
+                    telemetryModel: root.batteryTelemetryModel
+                    batteryId: model.motorId
+                    voltage: root.batteryValue(model.motorId, "voltage")
+                    current: root.batteryValue(model.motorId, "current")
+                    batteryRemaining: root.batteryValue(model.motorId, "batteryRemaining")
+                    temperatureCelsius: root.batteryValue(model.motorId, "temperatureCelsius")
+                    currentConsumedMah: root.batteryValue(model.motorId, "currentConsumedMah")
+                    cellVoltages: root.batteryCellVoltages(model.motorId)
+                    isStale: root.batteryStale(model.motorId)
+                    warningLevel: root.batteryWarningLevel(model.motorId)
+                    chartsFrozen: root.chartsFrozen
+                }
             }
         }
 
@@ -319,6 +369,8 @@ Flickable {
                 anchors.centerIn: parent
                 text: root.ghostType === "motorSummary"
                       ? "Motor " + root.ghostMotorId
+                      : root.ghostType === "batterySummary"
+                      ? "Battery " + root.ghostMotorId
                       : "Motor " + root.ghostMotorId + " · " + root.ghostMetric
                 color: "#e2e8ec"
                 font.pixelSize: 12

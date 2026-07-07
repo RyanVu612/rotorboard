@@ -1,5 +1,8 @@
 #include "store/DashboardLayoutModel.h"
 
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QSettings>
 #include <QtTest>
 
@@ -18,6 +21,8 @@ private slots:
     void editWidgetTypeSwitchAppliesDefaultSpan();
     void editWidgetTypeSwitchRelocatesWhenBlocked();
     void editWidgetTypeSwitchWithNoRoomIsRejected();
+    void batterySummaryUsesMotorSummaryDefaults();
+    void loadsExistingMotorOnlyLayoutUnchanged();
     void canPlaceReportsOverlapAndBounds();
 
 private:
@@ -164,6 +169,57 @@ void DashboardLayoutModelTest::editWidgetTypeSwitchWithNoRoomIsRejected()
     QCOMPARE(widgetRow(model, id, DashboardLayoutModel::RowRole), 1);
     QCOMPARE(widgetRow(model, id, DashboardLayoutModel::ColSpanRole), 1);
     QCOMPARE(widgetRow(model, id, DashboardLayoutModel::RowSpanRole), 1);
+}
+
+void DashboardLayoutModelTest::batterySummaryUsesMotorSummaryDefaults()
+{
+    DashboardLayoutModel model;
+
+    QCOMPARE(model.defaultColSpan(QStringLiteral("batterySummary")),
+             model.defaultColSpan(QStringLiteral("motorSummary")));
+    QCOMPARE(model.defaultRowSpan(QStringLiteral("batterySummary")),
+             model.defaultRowSpan(QStringLiteral("motorSummary")));
+
+    const QString id = model.addWidget(QStringLiteral("batterySummary"), 0, QString(), 1, 1, 0, 0);
+    QVERIFY(!id.isEmpty());
+    QCOMPARE(widgetRow(model, id, DashboardLayoutModel::ColRole), 1);
+    QCOMPARE(widgetRow(model, id, DashboardLayoutModel::RowRole), 1);
+    QCOMPARE(widgetRow(model, id, DashboardLayoutModel::ColSpanRole), 3);
+    QCOMPARE(widgetRow(model, id, DashboardLayoutModel::RowSpanRole), 4);
+}
+
+void DashboardLayoutModelTest::loadsExistingMotorOnlyLayoutUnchanged()
+{
+    QJsonArray widgets;
+    QJsonObject widget;
+    widget.insert(QStringLiteral("id"), QStringLiteral("motor-summary-1"));
+    widget.insert(QStringLiteral("type"), QStringLiteral("motorSummary"));
+    widget.insert(QStringLiteral("motorId"), 4);
+    widget.insert(QStringLiteral("metric"), QString());
+    widget.insert(QStringLiteral("col"), 2);
+    widget.insert(QStringLiteral("row"), 3);
+    widget.insert(QStringLiteral("colSpan"), 3);
+    widget.insert(QStringLiteral("rowSpan"), 4);
+    widgets.push_back(widget);
+
+    QSettings settings;
+    settings.beginGroup(QStringLiteral("Dashboard"));
+    settings.setValue(QStringLiteral("widgetsJson"),
+                      QString::fromUtf8(QJsonDocument(widgets).toJson(QJsonDocument::Compact)));
+    settings.endGroup();
+    settings.sync();
+
+    DashboardLayoutModel model;
+    QCOMPARE(model.rowCount(), 1);
+    const QModelIndex index = model.index(0);
+    QCOMPARE(model.data(index, DashboardLayoutModel::WidgetIdRole).toString(), QStringLiteral("motor-summary-1"));
+    QCOMPARE(model.data(index, DashboardLayoutModel::WidgetTypeRole).toString(), QStringLiteral("motorSummary"));
+    QCOMPARE(model.data(index, DashboardLayoutModel::MotorIdRole).toInt(), 4);
+    QCOMPARE(model.data(index, DashboardLayoutModel::MetricRole).toString(), QString());
+    QCOMPARE(model.data(index, DashboardLayoutModel::ColRole).toInt(), 2);
+    QCOMPARE(model.data(index, DashboardLayoutModel::RowRole).toInt(), 3);
+    QCOMPARE(model.data(index, DashboardLayoutModel::ColSpanRole).toInt(), 3);
+    QCOMPARE(model.data(index, DashboardLayoutModel::RowSpanRole).toInt(), 4);
 }
 
 void DashboardLayoutModelTest::canPlaceReportsOverlapAndBounds()

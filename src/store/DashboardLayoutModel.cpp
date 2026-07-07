@@ -207,7 +207,7 @@ int DashboardLayoutModel::defaultColSpan(const QString &type) const
     if (type == QLatin1String("chart")) {
         return 4;
     }
-    if (type == QLatin1String("motorSummary")) {
+    if (type == QLatin1String("motorSummary") || type == QLatin1String("batterySummary")) {
         return 3;
     }
     return 1;
@@ -218,7 +218,7 @@ int DashboardLayoutModel::defaultRowSpan(const QString &type) const
     if (type == QLatin1String("chart")) {
         return 3;
     }
-    if (type == QLatin1String("motorSummary")) {
+    if (type == QLatin1String("motorSummary") || type == QLatin1String("batterySummary")) {
         return 4;
     }
     return 1;

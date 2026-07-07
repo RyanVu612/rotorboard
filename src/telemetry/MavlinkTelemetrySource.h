@@ -26,6 +26,8 @@ public:
 
     static void handleEscStatusMessage(const mavlink_message_t &message,
                                        const std::function<void(const MotorTelemetry &)> &emitSample);
+    static void handleBatteryStatusMessage(const mavlink_message_t &message,
+                                           const std::function<void(const BatteryTelemetry &)> &emitSample);
 
 private slots:
     void onBytesReceived(const QByteArray &data);

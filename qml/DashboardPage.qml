@@ -165,6 +165,7 @@ Rectangle {
             width: parent.width
             height: parent.height - y
             telemetryModel: root.controller.telemetryModel
+            batteryTelemetryModel: root.controller.batteryTelemetryModel
             layoutModel: root.controller.layoutModel
             chartsFrozen: root.controller.chartsFrozen
 

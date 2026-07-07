@@ -1,6 +1,7 @@
 #pragma once
 
 #include "store/DashboardLayoutModel.h"
+#include "store/BatteryTelemetryModel.h"
 #include "store/MotorTelemetryModel.h"
 #include "telemetry/TelemetryManager.h"
 #include "telemetry/TelemetrySourceConfig.h"
@@ -11,6 +12,7 @@ class AppController : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QObject *telemetryModel READ telemetryModel CONSTANT)
+    Q_PROPERTY(QObject *batteryTelemetryModel READ batteryTelemetryModel CONSTANT)
     Q_PROPERTY(QObject *layoutModel READ layoutModel CONSTANT)
     Q_PROPERTY(QString sourceLabel READ sourceLabel NOTIFY sourceLabelChanged)
     Q_PROPERTY(bool linkMonitored READ linkMonitored NOTIFY linkStatusChanged)
@@ -31,6 +33,7 @@ public:
     ~AppController() override;
 
     QObject *telemetryModel();
+    QObject *batteryTelemetryModel();
     QObject *layoutModel();
     QString sourceLabel() const;
     bool linkMonitored() const;
@@ -83,6 +86,7 @@ private:
     QString m_linkStatusText;
     bool m_chartsFrozen = false;
     MotorTelemetryModel m_telemetryModel;
+    BatteryTelemetryModel m_batteryTelemetryModel;
     DashboardLayoutModel m_layoutModel;
     TelemetryManager m_telemetryManager;
 };

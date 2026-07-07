@@ -1,5 +1,6 @@
 #include "app/AppController.h"
 
+#include "model/BatteryTelemetry.h"
 #include "model/MotorTelemetry.h"
 #include "telemetry/TelemetrySourceConfig.h"
 
@@ -37,6 +38,7 @@ int main (int argc, char *argv[])
     QCoreApplication::setOrganizationName(QStringLiteral("Rotorboard"));
     QCoreApplication::setApplicationName(QStringLiteral("Rotorboard"));
     qRegisterMetaType<MotorTelemetry>();
+    qRegisterMetaType<BatteryTelemetry>();
 
     QString logPath;
     bool logRequested = false;

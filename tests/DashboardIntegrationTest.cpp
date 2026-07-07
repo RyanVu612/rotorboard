@@ -9,6 +9,7 @@
 #include <QSettings>
 #include <QtTest>
 
+#include <QHash>
 #include <memory>
 
 class TestTelemetryModel : public QObject
@@ -48,10 +49,89 @@ private:
     QVector<int> m_motorIds;
 };
 
+class TestBatteryTelemetryModel : public QObject
+{
+    Q_OBJECT
+    Q_PROPERTY(int sampleRevision READ sampleRevision NOTIFY sampleRevisionChanged)
+
+public:
+    struct BatterySample {
+        double voltage = 0.0;
+        double current = 0.0;
+        double batteryRemaining = -1.0;
+        double temperatureCelsius = 0.0;
+        double currentConsumedMah = 0.0;
+        QVariantList cellVoltages;
+        bool isStale = false;
+        int warningLevel = 0;
+    };
+
+    explicit TestBatteryTelemetryModel(QObject *parent = nullptr) : QObject(parent) {}
+
+    int sampleRevision() const { return m_sampleRevision; }
+
+    Q_INVOKABLE QVariant valueForMetric(int batteryId, const QString &metric) const
+    {
+        const auto it = m_samples.constFind(batteryId);
+        if (it == m_samples.constEnd()) {
+            return 0.0;
+        }
+        if (metric == QLatin1String("voltage")) {
+            return it->voltage;
+        }
+        if (metric == QLatin1String("current")) {
+            return it->current;
+        }
+        if (metric == QLatin1String("batteryRemaining")) {
+            return it->batteryRemaining;
+        }
+        if (metric == QLatin1String("temperatureCelsius")) {
+            return it->temperatureCelsius;
+        }
+        if (metric == QLatin1String("currentConsumedMah")) {
+            return it->currentConsumedMah;
+        }
+        return 0.0;
+    }
+
+    Q_INVOKABLE QVariantList cellVoltagesForBattery(int batteryId) const
+    {
+        const auto it = m_samples.constFind(batteryId);
+        return it == m_samples.constEnd() ? QVariantList() : it->cellVoltages;
+    }
+
+    Q_INVOKABLE bool isBatteryStale(int batteryId) const
+    {
+        const auto it = m_samples.constFind(batteryId);
+        return it == m_samples.constEnd() ? true : it->isStale;
+    }
+
+    Q_INVOKABLE int warningLevelForBattery(int batteryId) const
+    {
+        const auto it = m_samples.constFind(batteryId);
+        return it == m_samples.constEnd() ? 3 : it->warningLevel;
+    }
+
+    void setSample(int batteryId, const BatterySample &sample)
+    {
+        m_samples.insert(batteryId, sample);
+        ++m_sampleRevision;
+        emit sampleRevisionChanged();
+    }
+
+signals:
+    void sampleRevisionChanged();
+
+private:
+    int m_sampleRevision = 0;
+    QHash<int, BatterySample> m_samples;
+};
+
 class TestController : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QObject *telemetryModel READ telemetryModel CONSTANT)
+    Q_PROPERTY(QObject *batteryTelemetryModel READ batteryTelemetryModel CONSTANT)
     Q_PROPERTY(QObject *layoutModel READ layoutModel CONSTANT)
     Q_PROPERTY(QString sourceLabel READ sourceLabel NOTIFY sourceLabelChanged)
     Q_PROPERTY(bool linkMonitored READ linkMonitored NOTIFY linkStatusChanged)
@@ -67,9 +147,11 @@ public:
     explicit TestController(QObject *parent = nullptr) : QObject(parent) {}
 
     QObject *telemetryModel() { return &m_telemetryModel; }
+    QObject *batteryTelemetryModel() { return &m_batteryTelemetryModel; }
     QObject *layoutModel() { return &m_layoutModel; }
     DashboardLayoutModel *layout() { return &m_layoutModel; }
     TestTelemetryModel *telemetry() { return &m_telemetryModel; }
+    TestBatteryTelemetryModel *batteryTelemetry() { return &m_batteryTelemetryModel; }
 
     QString sourceLabel() const { return QStringLiteral("Test"); }
     bool linkMonitored() const { return false; }
@@ -130,6 +212,7 @@ private:
     QString m_mavlinkSerialPort;
     int m_mavlinkSerialBaud = 115200;
     TestTelemetryModel m_telemetryModel;
+    TestBatteryTelemetryModel m_batteryTelemetryModel;
     DashboardLayoutModel m_layoutModel;
 };
 
@@ -148,6 +231,7 @@ private slots:
     void addWhileGhostActiveReopensDialog();
     void dragResizeAndSwapUpdateLayout();
     void contextMenuEditDuplicateDelete();
+    void addingEditingAndPersistingBatterySummaryWidget();
     void pauseToggleAndTelemetrySeeding();
 
 private:
@@ -161,6 +245,7 @@ private:
     QObject *find(QObject *root, const QString &name);
     QQuickItem *findItem(QObject *root, const QString &name);
     QQuickItem *findSlot(QObject *root, const QString &widgetId);
+    QQuickItem *findItemByObjectNameInTree(QQuickItem *root, const QString &name);
     QString addWidget(DashboardLayoutModel *model,
                       const QString &type,
                       int motorId,
@@ -293,6 +378,28 @@ QQuickItem *DashboardIntegrationTest::findSlot(QObject *root, const QString &wid
         waitForQml();
     }
     QTest::qFail(qPrintable(QStringLiteral("Missing widget slot for id '%1'").arg(widgetId)), __FILE__, __LINE__);
+    return nullptr;
+}
+
+QQuickItem *DashboardIntegrationTest::findItemByObjectNameInTree(QQuickItem *root, const QString &name)
+{
+    // Repeater delegates are QObject-parented to the Repeater itself, not to
+    // their visual QQuickItem parent, so QObject::findChild cannot see them
+    // from an ancestor above the Repeater. Walk the QQuickItem child-item tree
+    // directly instead (same approach as findSlot above).
+    if (!root) {
+        return nullptr;
+    }
+    QVector<QQuickItem *> stack{root};
+    while (!stack.isEmpty()) {
+        QQuickItem *item = stack.takeLast();
+        if (item->objectName() == name) {
+            return item;
+        }
+        for (QQuickItem *child : item->childItems()) {
+            stack.append(child);
+        }
+    }
     return nullptr;
 }
 
@@ -609,6 +716,120 @@ void DashboardIntegrationTest::contextMenuEditDuplicateDelete()
     waitForQml();
     invoke(find(harness->page, QStringLiteral("cardMenuDeleteAction")), "triggered");
     QVERIFY(!hasWidget(layout, id));
+}
+
+void DashboardIntegrationTest::addingEditingAndPersistingBatterySummaryWidget()
+{
+    auto harness = createHarness();
+    QVERIFY(harness);
+
+    TestBatteryTelemetryModel::BatterySample first;
+    first.voltage = 24.7;
+    first.current = 15.2;
+    first.batteryRemaining = 76.0;
+    first.temperatureCelsius = 35.4;
+    first.currentConsumedMah = 1234.0;
+    first.cellVoltages = {4.10, 4.12, 4.11, 4.13, 4.09, 4.10};
+    harness->controller.batteryTelemetry()->setSample(0, first);
+
+    TestBatteryTelemetryModel::BatterySample second;
+    second.voltage = 22.1;
+    second.current = 8.4;
+    second.batteryRemaining = 55.0;
+    second.temperatureCelsius = 31.0;
+    second.currentConsumedMah = 2222.0;
+    second.cellVoltages = {3.68, 3.69, 3.67, 3.70, 3.68, 3.69};
+    harness->controller.batteryTelemetry()->setSample(1, second);
+
+    TestBatteryTelemetryModel::BatterySample third;
+    third.voltage = 25.3;
+    third.current = 19.8;
+    third.batteryRemaining = 88.0;
+    third.temperatureCelsius = 29.5;
+    third.currentConsumedMah = 900.0;
+    third.cellVoltages = {4.21, 4.22, 4.20, 4.23, 4.22, 4.21};
+    harness->controller.batteryTelemetry()->setSample(2, third);
+    waitForQml();
+
+    QObject *dialog = find(harness->page, QStringLiteral("widgetDialog"));
+    QObject *grid = find(harness->page, QStringLiteral("dashboardGrid"));
+    QObject *typeCombo = find(dialog, QStringLiteral("widgetTypeCombo"));
+    QObject *motorSpin = find(dialog, QStringLiteral("widgetMotorSpinBox"));
+    QObject *metricCombo = find(dialog, QStringLiteral("widgetMetricCombo"));
+
+    invoke(dialog, "openForAdd");
+    setComboIndex(typeCombo, 3);
+    QCOMPARE(motorSpin->property("from").toInt(), 0);
+    QVERIFY(!metricCombo->property("visible").toBool());
+    setSpinValue(motorSpin, 0);
+    QVERIFY(QMetaObject::invokeMethod(dialog, "confirmed",
+                                      Q_ARG(QString, QStringLiteral("add")),
+                                      Q_ARG(QString, QString()),
+                                      Q_ARG(QString, QStringLiteral("batterySummary")),
+                                      Q_ARG(int, 0),
+                                      Q_ARG(QString, QString())));
+    invoke(dialog, "close");
+
+    QVERIFY(QMetaObject::invokeMethod(grid, "updateGhost", Q_ARG(QVariant, 20), Q_ARG(QVariant, 20)));
+    waitForQml();
+    invoke(grid, "commitGhost");
+
+    DashboardLayoutModel *layout = harness->controller.layout();
+    QCOMPARE(layout->rowCount(), 1);
+    const QString firstId = layout->data(layout->index(0), DashboardLayoutModel::WidgetIdRole).toString();
+    QCOMPARE(roleData(layout, firstId, DashboardLayoutModel::WidgetTypeRole).toString(), QStringLiteral("batterySummary"));
+    QCOMPARE(roleData(layout, firstId, DashboardLayoutModel::MotorIdRole).toInt(), 0);
+
+    QQuickItem *firstSlot = findSlot(harness->page, firstId);
+    QVERIFY(firstSlot->findChild<QQuickItem *>(QStringLiteral("batterySummaryCard-0")));
+    QQuickItem *firstVoltageText = findItemByObjectNameInTree(firstSlot, QStringLiteral("batteryMetricValue-voltage"));
+    QVERIFY(firstVoltageText);
+    QCOMPARE(firstVoltageText->property("text").toString(), QStringLiteral("24.7 V"));
+    QQuickItem *firstCurrentText = findItemByObjectNameInTree(firstSlot, QStringLiteral("batteryMetricValue-current"));
+    QVERIFY(firstCurrentText);
+    QCOMPARE(firstCurrentText->property("text").toString(), QStringLiteral("15.2 A"));
+    QQuickItem *firstRemainingText = findItemByObjectNameInTree(firstSlot, QStringLiteral("batteryMetricValue-remaining"));
+    QVERIFY(firstRemainingText);
+    QCOMPARE(firstRemainingText->property("text").toString(), QStringLiteral("76%"));
+
+    const QString secondId = addWidget(layout, QStringLiteral("batterySummary"), 1, QString(), 5, 1, 0, 0);
+    QQuickItem *secondSlot = findSlot(harness->page, secondId);
+    QVERIFY(secondSlot->findChild<QQuickItem *>(QStringLiteral("batterySummaryCard-1")));
+    QQuickItem *secondVoltageText = findItemByObjectNameInTree(secondSlot, QStringLiteral("batteryMetricValue-voltage"));
+    QVERIFY(secondVoltageText);
+    QCOMPARE(secondVoltageText->property("text").toString(), QStringLiteral("22.1 V"));
+
+    QVERIFY(QMetaObject::invokeMethod(grid, "openWidgetMenu", Q_ARG(QVariant, firstId),
+                                      Q_ARG(QVariant, QStringLiteral("batterySummary")),
+                                      Q_ARG(QVariant, 0),
+                                      Q_ARG(QVariant, QString()),
+                                      Q_ARG(QVariant, QPointF(20, 20))));
+    waitForQml();
+    invoke(find(harness->page, QStringLiteral("cardMenuEditAction")), "triggered");
+    QVERIFY(dialog->property("logicallyOpen").toBool());
+    setSpinValue(motorSpin, 2);
+    QVERIFY(QMetaObject::invokeMethod(dialog, "confirmed",
+                                      Q_ARG(QString, QStringLiteral("edit")),
+                                      Q_ARG(QString, firstId),
+                                      Q_ARG(QString, QStringLiteral("batterySummary")),
+                                      Q_ARG(int, 2),
+                                      Q_ARG(QString, QString())));
+    invoke(dialog, "close");
+    waitForQml();
+
+    QCOMPARE(roleData(layout, firstId, DashboardLayoutModel::WidgetTypeRole).toString(), QStringLiteral("batterySummary"));
+    QCOMPARE(roleData(layout, firstId, DashboardLayoutModel::MotorIdRole).toInt(), 2);
+    firstSlot = findSlot(harness->page, firstId);
+    QVERIFY(firstSlot->findChild<QQuickItem *>(QStringLiteral("batterySummaryCard-2")));
+    QQuickItem *editedVoltageText = findItemByObjectNameInTree(firstSlot, QStringLiteral("batteryMetricValue-voltage"));
+    QVERIFY(editedVoltageText);
+    QCOMPARE(editedVoltageText->property("text").toString(), QStringLiteral("25.3 V"));
+    QQuickItem *unchangedSecondVoltageText =
+        findItemByObjectNameInTree(secondSlot, QStringLiteral("batteryMetricValue-voltage"));
+    QVERIFY(unchangedSecondVoltageText);
+    QCOMPARE(unchangedSecondVoltageText->property("text").toString(), QStringLiteral("22.1 V"));
+    QVERIFY(hasWidget(layout, firstId));
+    QVERIFY(hasWidget(layout, secondId));
 }
 
 void DashboardIntegrationTest::pauseToggleAndTelemetrySeeding()

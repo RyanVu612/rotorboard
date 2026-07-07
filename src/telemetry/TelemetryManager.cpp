@@ -1,13 +1,15 @@
 #include "TelemetryManager.h"
 
 #include "logging/CsvTelemetryLogger.h"
+#include "store/BatteryTelemetryModel.h"
 #include "store/MotorTelemetryModel.h"
 
 #include <QDateTime>
 
-TelemetryManager::TelemetryManager(MotorTelemetryModel *model, QObject *parent)
+TelemetryManager::TelemetryManager(MotorTelemetryModel *model, BatteryTelemetryModel *batteryModel, QObject *parent)
     : QObject(parent)
     , m_model(model)
+    , m_batteryModel(batteryModel)
 {
     m_staleTimer.setInterval(kStaleRefreshIntervalMillis);
     connect(&m_staleTimer, &QTimer::timeout, this, &TelemetryManager::refreshStaleState);
@@ -28,6 +30,8 @@ void TelemetryManager::setSource(std::unique_ptr<TelemetrySource> source)
 
     connect(m_source.get(), &TelemetrySource::telemetryReceived,
             this, &TelemetryManager::handleTelemetryReceived);
+    connect(m_source.get(), &TelemetrySource::batteryTelemetryReceived,
+            this, &TelemetryManager::handleBatteryTelemetryReceived);
 
     if (m_running) {
         m_source->start();
@@ -92,11 +96,20 @@ void TelemetryManager::handleTelemetryReceived(const MotorTelemetry &telemetry)
     }
 }
 
+void TelemetryManager::handleBatteryTelemetryReceived(const BatteryTelemetry &telemetry)
+{
+    if (m_batteryModel) {
+        m_batteryModel->updateTelemetry(telemetry);
+    }
+}
+
 void TelemetryManager::refreshStaleState()
 {
-    if (!m_model) {
-        return;
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    if (m_model) {
+        m_model->refreshStaleState(now, kStaleThresholdMillis);
     }
-
-    m_model->refreshStaleState(QDateTime::currentMSecsSinceEpoch(), kStaleThresholdMillis);
+    if (m_batteryModel) {
+        m_batteryModel->refreshStaleState(now, kStaleThresholdMillis);
+    }
 }

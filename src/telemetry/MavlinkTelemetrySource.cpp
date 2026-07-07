@@ -2,6 +2,7 @@
 
 #include <QDateTime>
 #include <QDebug>
+#include <limits>
 
 namespace {
 constexpr int kEscSlotsPerMessage = 4;
@@ -143,13 +144,18 @@ void MavlinkTelemetrySource::emitStatus()
 
 void MavlinkTelemetrySource::handleMessage(const mavlink_message_t &message)
 {
-    if (message.msgid != MAVLINK_MSG_ID_ESC_STATUS) {
+    if (message.msgid == MAVLINK_MSG_ID_ESC_STATUS) {
+        handleEscStatusMessage(message, [this](const MotorTelemetry &telemetry) {
+            emit telemetryReceived(telemetry);
+        });
         return;
     }
 
-    handleEscStatusMessage(message, [this](const MotorTelemetry &telemetry) {
-        emit telemetryReceived(telemetry);
-    });
+    if (message.msgid == MAVLINK_MSG_ID_BATTERY_STATUS) {
+        handleBatteryStatusMessage(message, [this](const BatteryTelemetry &telemetry) {
+            emit batteryTelemetryReceived(telemetry);
+        });
+    }
 }
 
 void MavlinkTelemetrySource::handleEscStatusMessage(
@@ -181,4 +187,34 @@ void MavlinkTelemetrySource::handleEscStatusMessage(
 
         emitSample(sample);
     }
+}
+
+void MavlinkTelemetrySource::handleBatteryStatusMessage(
+    const mavlink_message_t &message,
+    const std::function<void(const BatteryTelemetry &)> &emitSample)
+{
+    mavlink_battery_status_t batteryStatus{};
+    mavlink_msg_battery_status_decode(&message, &batteryStatus);
+
+    BatteryTelemetry sample;
+    sample.batteryId = batteryStatus.id;
+    for (int i = 0; i < 10; ++i) {
+        if (batteryStatus.voltages[i] == UINT16_MAX) {
+            continue;
+        }
+        const double cellVoltage = batteryStatus.voltages[i] / 1000.0;
+        sample.cellVoltages.push_back(cellVoltage);
+        sample.voltage += cellVoltage;
+    }
+    sample.current = batteryStatus.current_battery == -1 ? -1.0 : batteryStatus.current_battery / 100.0;
+    sample.batteryRemaining = batteryStatus.battery_remaining == -1
+        ? -1.0
+        : static_cast<double>(batteryStatus.battery_remaining);
+    sample.temperatureCelsius = batteryStatus.temperature == INT16_MAX
+        ? std::numeric_limits<double>::quiet_NaN()
+        : batteryStatus.temperature / 100.0;
+    sample.currentConsumedMah = static_cast<double>(batteryStatus.current_consumed);
+    sample.timestampMillis = QDateTime::currentMSecsSinceEpoch();
+
+    emitSample(sample);
 }

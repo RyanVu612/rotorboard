@@ -54,6 +54,8 @@ qt_add_executable(rotorboard_app
     src/main.cpp
     src/app/AppController.h
     src/app/AppController.cpp
+    src/model/BatteryTelemetry.h
+    src/model/BatteryTelemetry.cpp
     src/model/MotorTelemetry.h
     src/model/MotorTelemetry.cpp
     src/model/WarningLevel.h
@@ -71,8 +73,12 @@ qt_add_executable(rotorboard_app
     src/store/MotorSampleRingBuffer.cpp
     src/store/MotorTelemetryModel.h
     src/store/MotorTelemetryModel.cpp
+    src/store/BatteryTelemetryModel.h
+    src/store/BatteryTelemetryModel.cpp
     src/store/DashboardLayoutModel.h
     src/store/DashboardLayoutModel.cpp
+    src/warnings/BatteryWarningEvaluator.h
+    src/warnings/BatteryWarningEvaluator.cpp
     src/warnings/MotorWarningEvaluator.h
     src/warnings/MotorWarningEvaluator.cpp
     ${ROTORBOARD_MAVLINK_SOURCES}
@@ -90,6 +96,7 @@ set_source_files_properties(qml/Sparkline.qml PROPERTIES QT_RESOURCE_ALIAS Spark
 set_source_files_properties(qml/widgets/ValueTile.qml PROPERTIES QT_RESOURCE_ALIAS widgets/ValueTile.qml)
 set_source_files_properties(qml/widgets/ChartTile.qml PROPERTIES QT_RESOURCE_ALIAS widgets/ChartTile.qml)
 set_source_files_properties(qml/widgets/MotorSummaryCard.qml PROPERTIES QT_RESOURCE_ALIAS widgets/MotorSummaryCard.qml)
+set_source_files_properties(qml/widgets/BatterySummaryCard.qml PROPERTIES QT_RESOURCE_ALIAS widgets/BatterySummaryCard.qml)
 set_source_files_properties(qml/widgets/DashboardWidgetSlot.qml PROPERTIES QT_RESOURCE_ALIAS widgets/DashboardWidgetSlot.qml)
 
 qt_add_qml_module(rotorboard_app
@@ -107,6 +114,7 @@ qt_add_qml_module(rotorboard_app
         qml/widgets/ValueTile.qml
         qml/widgets/ChartTile.qml
         qml/widgets/MotorSummaryCard.qml
+        qml/widgets/BatterySummaryCard.qml
         qml/widgets/DashboardWidgetSlot.qml
 )
 
@@ -154,6 +162,46 @@ target_link_libraries(rotorboard_model_tests PRIVATE
 
 add_test(NAME rotorboard_model_tests COMMAND rotorboard_model_tests)
 
+qt_add_executable(rotorboard_battery_model_tests
+    tests/BatteryTelemetryModelTest.cpp
+    src/model/BatteryTelemetry.h
+    src/model/BatteryTelemetry.cpp
+    src/model/WarningLevel.h
+    src/store/MotorSampleRingBuffer.h
+    src/store/MotorSampleRingBuffer.cpp
+    src/store/BatteryTelemetryModel.h
+    src/store/BatteryTelemetryModel.cpp
+    src/warnings/BatteryWarningEvaluator.h
+    src/warnings/BatteryWarningEvaluator.cpp
+)
+
+target_include_directories(rotorboard_battery_model_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_link_libraries(rotorboard_battery_model_tests PRIVATE
+    Qt6::Core
+    Qt6::Test
+)
+
+add_test(NAME rotorboard_battery_model_tests COMMAND rotorboard_battery_model_tests)
+
+qt_add_executable(rotorboard_battery_warning_tests
+    tests/BatteryWarningEvaluatorTest.cpp
+    src/model/BatteryTelemetry.h
+    src/model/BatteryTelemetry.cpp
+    src/model/WarningLevel.h
+    src/warnings/BatteryWarningEvaluator.h
+    src/warnings/BatteryWarningEvaluator.cpp
+)
+
+target_include_directories(rotorboard_battery_warning_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_link_libraries(rotorboard_battery_warning_tests PRIVATE
+    Qt6::Core
+    Qt6::Test
+)
+
+add_test(NAME rotorboard_battery_warning_tests COMMAND rotorboard_battery_warning_tests)
+
 qt_add_executable(rotorboard_layout_tests
     tests/DashboardLayoutModelTest.cpp
     src/store/DashboardLayoutModel.h
@@ -191,6 +239,7 @@ qt_add_qml_module(rotorboard_dashboard_integration_tests
         qml/widgets/ValueTile.qml
         qml/widgets/ChartTile.qml
         qml/widgets/MotorSummaryCard.qml
+        qml/widgets/BatterySummaryCard.qml
         qml/widgets/DashboardWidgetSlot.qml
 )
 
@@ -218,6 +267,8 @@ qt_add_executable(rotorboard_app_controller_tests
     tests/AppControllerTest.cpp
     src/app/AppController.h
     src/app/AppController.cpp
+    src/model/BatteryTelemetry.h
+    src/model/BatteryTelemetry.cpp
     src/model/MotorTelemetry.h
     src/model/MotorTelemetry.cpp
     src/model/WarningLevel.h
@@ -235,8 +286,12 @@ qt_add_executable(rotorboard_app_controller_tests
     src/store/MotorSampleRingBuffer.cpp
     src/store/MotorTelemetryModel.h
     src/store/MotorTelemetryModel.cpp
+    src/store/BatteryTelemetryModel.h
+    src/store/BatteryTelemetryModel.cpp
     src/store/DashboardLayoutModel.h
     src/store/DashboardLayoutModel.cpp
+    src/warnings/BatteryWarningEvaluator.h
+    src/warnings/BatteryWarningEvaluator.cpp
     src/warnings/MotorWarningEvaluator.h
     src/warnings/MotorWarningEvaluator.cpp
     ${ROTORBOARD_MAVLINK_SOURCES}
@@ -304,6 +359,8 @@ add_test(NAME rotorboard_logger_tests COMMAND rotorboard_logger_tests)
 
 qt_add_executable(rotorboard_mavlink_tests
     tests/MavlinkTelemetrySourceTest.cpp
+    src/model/BatteryTelemetry.h
+    src/model/BatteryTelemetry.cpp
     src/model/MotorTelemetry.h
     src/model/MotorTelemetry.cpp
     src/telemetry/TelemetrySource.h
@@ -332,6 +389,8 @@ add_test(NAME rotorboard_mavlink_tests COMMAND rotorboard_mavlink_tests)
 
 qt_add_executable(rotorboard_mavlink_serial_tests
     tests/MavlinkSerialTelemetrySourceTest.cpp
+    src/model/BatteryTelemetry.h
+    src/model/BatteryTelemetry.cpp
     src/model/MotorTelemetry.h
     src/model/MotorTelemetry.cpp
     src/telemetry/TelemetrySource.h
@@ -361,6 +420,8 @@ add_test(NAME rotorboard_mavlink_serial_tests COMMAND rotorboard_mavlink_serial_
 
 qt_add_executable(rotorboard_dronecan_tests
     tests/DroneCanTelemetrySourceTest.cpp
+    src/model/BatteryTelemetry.h
+    src/model/BatteryTelemetry.cpp
     src/model/MotorTelemetry.h
     src/model/MotorTelemetry.cpp
     src/telemetry/TelemetrySource.h
